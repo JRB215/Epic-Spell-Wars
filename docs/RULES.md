@@ -102,7 +102,7 @@ The 18 player's spell: Source "Bleemax Brainiac's" reveals the top 2 cards of th
 ## Open questions (rules gaps to settle with the owner)
 
 1. **Dead Wizard deck size:** 25 official, or the owner's merged set (up to 50)? Pending the owner separating them.
-2. **Hero cards:** each has special abilities. Waiting for the owner's scans of all 8.
+2. ~~Hero cards~~ settled: all 8 Heroes play identically (20 HP, no abilities). They differ only in character art and name. Scans are needed for the art only.
 3. **Dead Wizard cards drawn mid-match:** the rulebook says each dead wizard draws one at the start of each new round. Confirm that they are *kept* until the end of the whole *game* (all rounds), not the round.
 4. **Deck reshuffling:** the rulebook says decks are shuffled only when they run out. Confirm the Main Deck's discard pile is reshuffled in that case.
 5. **Card text:** every card's effect must be read from the scans (about 120 unique cards) before the engine can be finished.

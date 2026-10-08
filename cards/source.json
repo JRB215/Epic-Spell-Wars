@@ -1,0 +1,27 @@
+{
+  "deck": "SOURCE",
+  "copiesEach": 2,
+  "note": "Text is copied from the owner's scans. 'effects' will be filled in as the engine is written. Glyphs: ARCANE, DARK, ELEMENTAL, ILLUSION, PRIMAL.",
+  "cards": [
+    { "id": "thal-foons",        "name": "Thal Foon's",          "glyph": "ELEMENTAL", "scan": "IMG_20261008_0001.png", "text": "Deal 3 damage to each foe who already acted this round." },
+    { "id": "dr-rooty-barks",    "name": "Dr. Rooty Bark's",     "glyph": "PRIMAL",    "scan": "IMG_20261008_0002.png", "text": "You heal 3 HP. Each foe rolls a die. Each foe who rolls a 6 heals 3 HP." },
+    { "id": "rose-bottoms",      "name": "Rose Bottom's",        "glyph": "PRIMAL",    "scan": "IMG_20261008_0003.png", "text": "Heal 1 HP for each different glyph in your spell." },
+    { "id": "sphinxions",        "name": "Sphinxion's",          "glyph": "ILLUSION",  "scan": "IMG_20261008_0004.png", "text": "Choose and steal a Treasure belonging to any foe." },
+    { "id": "pam-and-hecubas",   "name": "Pam and Hecuba's",     "glyph": "ILLUSION",  "scan": "IMG_20261008_0005.png", "text": "Your Delivery targets each foe instead." },
+    { "id": "king-oberons",      "name": "King Oberon's",        "glyph": "PRIMAL",    "scan": "IMG_20261008_0006.png", "text": "Heal 2 HP." },
+    { "id": "the-death-fairys",  "name": "The Death Fairy's",    "glyph": "DARK",      "scan": "IMG_20261008_0007.png", "text": "Deal 2 damage to any foe. If that foe dies, repeat this effect." },
+    { "id": "sir-lootzors",      "name": "Sir Lootzor's",        "glyph": "ARCANE",    "scan": "IMG_20261008_0008.png", "text": "You gain a Treasure. Each foe rolls a die. Each foe that rolls a 6 gains a Treasure." },
+    { "id": "ben-voodoos",       "name": "Ben Voodoo's",         "glyph": "DARK",      "scan": "IMG_20261008_0009.png", "text": "Each foe rolls a die and takes that much damage. Destroy one of your Treasures if you have any." },
+    { "id": "scorchias",         "name": "Scorchia's",           "glyph": "ELEMENTAL", "scan": "IMG_20261008_0010.png", "text": "Deal 3 damage to your strongest foe." },
+    { "id": "wyrmtors",          "name": "Wyrmtor's",            "glyph": "ELEMENTAL", "scan": "IMG_20261008_0011.png", "text": "Deal 1 damage to each foe for each different glyph in your spell." },
+    { "id": "professor-prestos", "name": "Professor Presto's",   "glyph": "ARCANE",    "scan": "IMG_20261008_0012.png", "text": "Deal 3 damage to a random foe. If you played a Wild Magic card as part of your spell, gain a Treasure." },
+    { "id": "magma-gogs",        "name": "Magma Gog's",          "glyph": "ELEMENTAL", "scan": "IMG_20261008_0013.png", "text": "Choose one: Deal 3 damage to the foe on your left OR deal 1 damage to each foe." },
+    { "id": "bleemax-brainiacs", "name": "Bleemax Brainiac's",   "glyph": "ARCANE",    "scan": "IMG_20261008_0014.png", "text": "Reveal the top two cards of the Main Deck. Each one with a glyph that matches a glyph in your spell is added to your spell. Discard the rest." },
+    { "id": "beard-o-blastys",   "name": "Beard'o Blasty's",     "glyph": "ARCANE",    "scan": "IMG_20261008_0015.png", "text": "This card copies the text of the Delivery of your spell." },
+    { "id": "pew-and-pews",      "name": "Pew and Pew's",        "glyph": "ILLUSION",  "scan": "IMG_20261008_0016.png", "text": "Reveal the top four cards of the Main Deck. Add any revealed Source cards to your spell and discard the rest." },
+    { "id": "muzzlesnaps",       "name": "Muzzlesnap's",         "glyph": "PRIMAL",    "scan": "IMG_20261008_0017.png", "text": "Add a die to each of your Power Rolls this round." },
+    { "id": "old-scratchs",      "name": "Old Scratch's",        "glyph": "DARK",      "scan": "IMG_20261008_0018.png", "text": "Roll a die. If you roll 1-3, you suffer that much damage. If you roll 4-6, you heal that many HP." },
+    { "id": "walker-time-rangers", "name": "Walker Time Ranger's", "glyph": "ILLUSION", "scan": "IMG_20261008_0019.png", "scanNote": "scanned in a different orientation from the other cards", "text": "Each player rolls a die. Add 1 to your roll for each different glyph in your spell. Deal 3 damage to the lowest roller(s)." },
+    { "id": "midnight-merlins",  "name": "Midnight Merlin's",    "glyph": "DARK",      "scan": "IMG_20261008_0020.png", "text": "Deal 1 damage to your strongest foe for each living Wizard. Then draw a Dead Wizard card." }
+  ]
+}
