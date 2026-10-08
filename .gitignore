@@ -1,0 +1,17 @@
+# Raw card scans and rulebook PDFs: large, copyrighted, kept local only
+*.zip
+*.pdf
+/Card Back and Wild Card/
+/Delivery/
+/Source/
+/Quality/
+/Graveyards/
+/Treasures/
+
+# Build output and IDE files
+build/
+.gradle/
+.idea/
+*.iml
+.kotlin/
+node_modules/
