@@ -12,6 +12,10 @@
 /Base/Character Sheets/
 /Base/Game Contents.txt
 
+# Expansion 1 scans (its rulebook PDF is already covered by *.pdf)
+/Expansion 1/Dead Wizard/
+/Expansion 1/cards-upright/
+
 # Upright copies made by tools/orient_scans.py
 /Base/cards-upright/
 
