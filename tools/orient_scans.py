@@ -2,8 +2,10 @@
 
 Usage:  python tools/orient_scans.py
 
-Reads  <repo>/<Deck folder>/*.png   (raw scans, never modified)
-Writes <repo>/cards-upright/<Deck folder>/<same name>.jpg
+Reads  Base/<Deck folder>/*.png   (raw scans, never modified)
+Writes Base/cards-upright/<Deck folder>/<same name>.jpg
+
+For an expansion, point REPO at that expansion's folder instead of Base.
 
 Most scans are landscape images with the card lying on its side, so those get a
 quarter turn. Portrait scans were all upside down, so they get a half turn.
@@ -16,7 +18,7 @@ import sys
 
 from PIL import Image
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Base")
 DECKS = ["Source", "Quality", "Delivery", "Graveyards", "Treasures", "Card Back and Wild Card"]
 
 # (deck, file number) -> extra counter-clockwise degrees to apply to the finished card.

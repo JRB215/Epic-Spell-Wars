@@ -1,15 +1,18 @@
-# Raw card scans and rulebook PDFs: large, copyrighted, kept local only
+# Raw card scans, rulebook PDFs and zips: large, copyrighted, kept local only
 *.zip
 *.pdf
-/Card Back and Wild Card/
-/Delivery/
-/Source/
-/Quality/
-/Graveyards/
-/Treasures/
+
+# Base game scans (card data in Base/cards IS tracked)
+/Base/Card Back and Wild Card/
+/Base/Delivery/
+/Base/Source/
+/Base/Quality/
+/Base/Graveyards/
+/Base/Treasures/
+/Base/Game Contents.txt
 
 # Upright copies made by tools/orient_scans.py
-/cards-upright/
+/Base/cards-upright/
 
 # Build output and IDE files
 build/
