@@ -8,6 +8,9 @@
 /Graveyards/
 /Treasures/
 
+# Upright copies made by tools/orient_scans.py
+/cards-upright/
+
 # Build output and IDE files
 build/
 .gradle/
