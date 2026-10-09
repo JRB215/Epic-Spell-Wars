@@ -481,7 +481,7 @@ function mineHtml(p, pickable) {
   const cls = ['mine', p.alive ? '' : 'dead', pickable ? 'pickable' : ''].join(' ');
   return `<div class="${cls}" data-pid="${p.id}"><div class="board">
       <img class="bd" src="${esc(p.hero.board)}?w=700" alt="" onerror="this.style.minHeight='140px'">
-      ${p.alive ? `<img class="skull" id="mySkull" src="${PIECE('skull')}" alt="" style="left:${x}%;top:${y}%" onerror="this.style.display='none'">` : ''}</div>
+      ${p.alive ? `<div class="skull" id="mySkull" style="left:${x}%;top:${y}%"><img src="${PIECE('skull')}" alt="" onerror="this.remove()"></div>` : ''}</div>
     <div class="row"><span class="hp">${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span>${lwsHtml(p.tokens)}</div>
     <div class="chips">${chipsHtml(p)}</div></div>`;
 }

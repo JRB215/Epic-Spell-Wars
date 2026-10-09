@@ -140,7 +140,11 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .mine.dead { filter: grayscale(.9) brightness(.7); }
 .mine .board { position: relative; border-radius: 6px; overflow: hidden; line-height: 0; }
 .mine .board img.bd { width: 100%; height: auto; display: block; }
-.mine .board img.skull { position: absolute; width: 7.4%; height: auto; transform: translate(-50%, -50%); transition: left .9s cubic-bezier(.3, .8, .3, 1), top .9s cubic-bezier(.3, .8, .3, 1); filter: drop-shadow(0 2px 3px #000); }
+.mine .board .skull { position: absolute; width: 7.4%; aspect-ratio: 1; transform: translate(-50%, -50%); transition: left .9s cubic-bezier(.3, .8, .3, 1), top .9s cubic-bezier(.3, .8, .3, 1); filter: drop-shadow(0 2px 3px #000); }
+.mine .board .skull img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* If the skull picture is missing from the assets folder, a plain red marker is drawn instead. */
+.mine .board .skull:empty { background: var(--red); border: 2px solid #fff; border-radius: 50%; display: grid; place-items: center; }
+.mine .board .skull:empty::before { content: "\2620"; color: #fff; font-size: 1.2vw; line-height: 1; }
 .mine .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; }
 .mine .row .hp { font-family: Impact, sans-serif; font-size: 1.15rem; letter-spacing: .04em; }
 .hand { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: flex-end; padding-top: 6px; min-height: calc(var(--hand-w) * 1.4 + 10px); overflow: visible; }
