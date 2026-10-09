@@ -501,8 +501,8 @@ function foeSeatHtml(p, pickable) {
   const tags = `${p.bot ? 'bot' : ''}${!p.connected && !p.bot ? 'disconnected' : ''}${p.away ? ' (bot is playing)' : ''}`;
   const mini = p.spell ? p.spell.cards.map(() => `<i class="${p.spell.revealed ? 'up' : ''}"></i>`).join('') : '';
   return `<div class="${cls}" data-pid="${p.id}">
-    <div class="top"><img class="portrait" src="${esc(p.hero.art)}?w=140" alt="" onerror="this.style.visibility='hidden'">
-      <div class="who"><b>${esc(p.name)}</b><small>${esc(p.hero.name)}${p.hero.title ? ', ' + esc(p.hero.title) : ''}</small></div>${lwsHtml(p.tokens)}</div>
+    <div class="top"><div class="pwrap"><img class="portrait" src="${esc(p.hero.art)}?w=200" alt="" onerror="this.style.visibility='hidden'">${lwsHtml(p.tokens)}</div>
+      <div class="who"><b>${esc(p.name)}</b><small>${esc(p.hero.name)}${p.hero.title ? ', ' + esc(p.hero.title) : ''}</small></div></div>
     <div class="hprow"><img class="sk" src="${PIECE('skull')}" alt="" onerror="this.style.display='none'">
       <div class="hpbar"><i style="width:${pct}%;background:${hpColor(p)}"></i><span>${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span></div></div>
     <div class="chips">${chipsHtml(p)}</div>
@@ -514,8 +514,8 @@ function mineHtml(p, pickable) {
   const cls = ['mine', p.alive ? '' : 'dead', pickable ? 'pickable' : ''].join(' ');
   return `<div class="${cls}" data-pid="${p.id}"><div class="board">
       <img class="bd" src="${esc(p.hero.board)}?w=700" alt="" onerror="this.style.minHeight='140px'">
-      ${p.alive ? `<div class="skull" id="mySkull" style="left:${x}%;top:${y}%"><img src="${PIECE('skull')}" alt="" onerror="this.remove()"></div>` : ''}</div>
-    <div class="row"><span class="hp">${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span>${lwsHtml(p.tokens)}</div>
+      ${p.alive ? `<div class="skull" id="mySkull" style="left:${x}%;top:${y}%"><img src="${PIECE('skull')}" alt="" onerror="this.remove()"></div>` : ''}${lwsHtml(p.tokens)}</div>
+    <div class="row"><span class="hp">${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span></div>
     <div class="chips">${chipsHtml(p)}</div></div>`;
 }
 

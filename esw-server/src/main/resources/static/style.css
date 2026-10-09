@@ -99,9 +99,20 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .hpbar > span { position: relative; display: block; text-align: center; font-size: .72rem; font-weight: 700; line-height: 15px; text-shadow: 1px 1px 0 #000; }
 .lws { display: flex; gap: 3px; flex: 0 0 auto; }
 .lws { --tk: 26px; }
-.fseat .lws { --tk: 42px; }
-.mine .lws { --tk: 54px; }
 .mine .chips { min-height: 0; }
+/* Win tokens sit over the hero picture: hanging off the corner of an opponent's portrait... */
+.pwrap { position: relative; flex: 0 0 auto; }
+.pwrap .portrait { width: 62px; height: 88px; display: block; }
+.pwrap .lws { --tk: 36px; position: absolute; right: -20px; bottom: -8px; gap: 0; z-index: 2; }
+.pwrap .lws .tk + .tk { margin-left: -12px; }
+.pwrap .lws .tk { box-shadow: 0 2px 5px rgba(0, 0, 0, .8); background: rgba(10, 6, 16, .55); }
+.pwrap .lws .tk.full { background: none; }
+.fseat .who { padding-left: 12px; }
+/* ...and over the art half of my own board. */
+.mine .board .lws { --tk: 56px; position: absolute; left: 3%; bottom: 3%; gap: 0; z-index: 2; }
+.mine .board .lws .tk + .tk { margin-left: -14px; }
+.mine .board .lws .tk { box-shadow: 0 3px 8px rgba(0, 0, 0, .85); background: rgba(10, 6, 16, .55); }
+.mine .board .lws .tk.full { background: none; }
 .gameover .lws { --tk: 60px; }
 .lws .tk { width: var(--tk); height: var(--tk); border-radius: 50%; border: 2px dashed var(--line); display: grid; place-items: center; overflow: hidden; }
 .lws .tk.full { border: 0; }
