@@ -1,0 +1,84 @@
+{
+  "deck": "DELIVERY",
+  "copiesEach": 2,
+  "note": "Text is copied from the owner's scans. 'initiative' is the flame number on the card. Every Delivery is a Power Roll: 'roll.rows' are the three result bands (1-4, 5-9, 10+). Glyphs: ARCANE, DARK, ELEMENTAL, ILLUSION, PRIMAL.",
+  "cards": [
+    { "id": "mercy-killing", "name": "Mercy-Killing", "glyph": "DARK", "initiative": 5, "scan": "IMG_20261008_0001.png",
+      "roll": { "target": "WEAKEST_FOE", "targetText": "Your weakest foe", "rows": [
+        { "from": 1, "to": 4, "text": "2 damage" }, { "from": 5, "to": 9, "text": "3 damage" }, { "from": 10, "to": null, "text": "4 damage" } ] } },
+    { "id": "chicken", "name": "Chicken", "glyph": "ELEMENTAL", "initiative": 3, "scan": "IMG_20261008_0002.png",
+      "roll": { "target": "STRONGEST_FOE", "targetText": "Your strongest foe", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "1 damage" }, { "from": 10, "to": null, "text": "7 damage" } ] } },
+    { "id": "exorcism", "name": "Exorcism", "glyph": "DARK", "initiative": 11, "scan": "IMG_20261008_0003.png",
+      "roll": { "target": "EACH_FOE", "targetText": "Each foe", "rows": [
+        { "from": 1, "to": 4, "text": "You suffer 1 damage." },
+        { "from": 5, "to": 9, "text": "2 damage, or 4 if he has a Last Wizard Standing token." },
+        { "from": 10, "to": null, "text": "As above, but double the damage." } ] } },
+    { "id": "snakedance", "name": "Snakedance", "glyph": "PRIMAL", "initiative": 1, "scan": "IMG_20261008_0004.png",
+      "roll": { "target": "FOES_LEFT_AND_RIGHT", "targetText": "Foes on your left and right", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "2 damage" },
+        { "from": 10, "to": null, "text": "Deal 2 damage to those targets for each Primal glyph in your spell." } ] } },
+    { "id": "bedazzlement", "name": "Bedazzlement", "glyph": "ILLUSION", "initiative": 19, "scan": "IMG_20261008_0005.png",
+      "roll": { "target": "FOE_OF_CHOICE", "targetText": "Foe of your choice", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" },
+        { "from": 5, "to": 9, "text": "1 damage, and you may add a random card from your hand to your spell" },
+        { "from": 10, "to": null, "text": "As above, but you may choose the card instead" } ] } },
+    { "id": "phantasmagoons", "name": "Phantasmagoons", "glyph": "ILLUSION", "initiative": 17, "scan": "IMG_20261008_0006.png",
+      "roll": { "target": "FOE_ON_RIGHT", "targetText": "Foe on your right", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "3 damage" }, { "from": 10, "to": null, "text": "4 damage" } ] } },
+    { "id": "dragon-hoard", "name": "Dragon Hoard", "glyph": "ARCANE", "initiative": 6, "scan": "IMG_20261008_0007.png",
+      "roll": { "target": "EACH_FOE_WITHOUT_TREASURES", "targetText": "Each foe who has no Treasures", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "2 damage" },
+        { "from": 10, "to": null, "text": "3 damage, and you gain a Treasure." } ] } },
+    { "id": "fountain-of-youth", "name": "Fountain of Youth", "glyph": "PRIMAL", "initiative": 12, "scan": "IMG_20261008_0008.png",
+      "roll": { "target": "SELF", "targetText": "Yourself", "rows": [
+        { "from": 1, "to": 4, "text": "No effect" }, { "from": 5, "to": 9, "text": "Heal 2 HP" }, { "from": 10, "to": null, "text": "Heal 4 HP" } ] } },
+    { "id": "brain-suck", "name": "Brain Suck", "glyph": "ILLUSION", "initiative": 15, "scan": "IMG_20261008_0009.png",
+      "roll": { "target": "FOE_OF_CHOICE", "targetText": "Foe of your choice", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "3 damage" },
+        { "from": 10, "to": null, "text": "4 damage, and you may choose one of that foe's Treasures and steal it." } ] } },
+    { "id": "pact-with-the-devil", "name": "Pact with the Devil", "glyph": "DARK", "initiative": 18, "scan": "IMG_20261008_0010.png",
+      "roll": { "target": "STRONGEST_FOE", "targetText": "Your strongest foe", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "2 damage" },
+        { "from": 10, "to": null, "text": "2 damage, and if he has a Delivery in his spell, steal it and resolve it as part of your spell." } ] } },
+    { "id": "power-vortex", "name": "Power Vortex", "glyph": "ARCANE", "initiative": 16, "scan": "IMG_20261008_0011.png",
+      "roll": { "target": "EACH_FOE", "targetText": "Each foe", "rows": [
+        { "from": 1, "to": 4, "text": "You discard a card." },
+        { "from": 5, "to": 9, "text": "2 damage, and you discard two cards." },
+        { "from": 10, "to": null, "text": "As above, and you also gain a Treasure." } ] } },
+    { "id": "vorpal-trap", "name": "Vorpal Trap", "glyph": "ILLUSION", "initiative": 13, "scan": "IMG_20261008_0012.png",
+      "roll": { "target": "FOE_ON_LEFT", "targetText": "Foe on your left", "rows": [
+        { "from": 1, "to": 4, "text": "2 damage" }, { "from": 5, "to": 9, "text": "3 damage" },
+        { "from": 10, "to": null, "text": "3 damage, and the target must choose and destroy one of his Treasures or suffer 3 more damage." } ] } },
+    { "id": "fist-o-nature", "name": "Fist o' Nature", "glyph": "PRIMAL", "initiative": 14, "scan": "IMG_20261008_0013.png",
+      "roll": { "target": "FOE_ON_LEFT", "targetText": "Foe on your left", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "2 damage" }, { "from": 10, "to": null, "text": "4 damage" } ] } },
+    { "id": "gore-nado", "name": "Gore-Nado", "glyph": "PRIMAL", "initiative": 2, "scan": "IMG_20261008_0014.png",
+      "roll": { "target": "STRONGEST_FOE", "targetText": "Your strongest foe", "rows": [
+        { "from": 1, "to": 4, "text": "2 damage" }, { "from": 5, "to": 9, "text": "3 damage" }, { "from": 10, "to": null, "text": "6 damage" } ] } },
+    { "id": "testikill", "name": "Testikill", "glyph": "ARCANE", "initiative": 7, "scan": "IMG_20261008_0015.png",
+      "roll": { "target": "WEAKEST_FOE", "targetText": "Your weakest foe", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "3 damage" },
+        { "from": 10, "to": null, "text": "5 damage, and you gain a Treasure." } ] } },
+    { "id": "nuke-u-lur-meltdown", "name": "Nuke-U-Lur Meltdown", "glyph": "ELEMENTAL", "initiative": 10, "scan": "IMG_20261008_0016.png",
+      "roll": { "target": "STRONGEST_FOE", "targetText": "Your strongest foe", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" },
+        { "from": 5, "to": 9, "text": "3 damage, and 1 damage to each player adjacent to that foe." },
+        { "from": 10, "to": null, "text": "As above, but 5 damage instead of 3." } ] } },
+    { "id": "death-wish", "name": "Death Wish", "glyph": "DARK", "initiative": 8, "scan": "IMG_20261008_0017.png",
+      "roll": { "target": "FOE_ON_RIGHT", "targetText": "Foe on your right", "rows": [
+        { "from": 1, "to": 4, "text": "2 damage, and you take 1 damage." },
+        { "from": 5, "to": 9, "text": "3 damage, and you take 1 damage." },
+        { "from": 10, "to": null, "text": "5 damage, and you take 1 damage." } ] } },
+    { "id": "meatier-swarm", "name": "Meatier Swarm", "glyph": "ELEMENTAL", "initiative": 20, "scan": "IMG_20261008_0018.png",
+      "roll": { "target": "EACH_STRONGER_FOE", "targetText": "Each of your stronger foes", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "3 damage" }, { "from": 10, "to": null, "text": "4 damage" } ] } },
+    { "id": "lightning-bolt", "name": "Lightning Bolt", "glyph": "ELEMENTAL", "initiative": 9, "scan": "IMG_20261008_0019.png",
+      "roll": { "target": "TWO_FOES_ON_LEFT", "targetText": "The two foes on your left", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "2 damage" }, { "from": 10, "to": null, "text": "4 damage" } ] } },
+    { "id": "cone-of-acid", "name": "Cone of Acid", "glyph": "ARCANE", "initiative": 4, "scan": "IMG_20261008_0020.png",
+      "roll": { "target": "FOES_LEFT_AND_RIGHT", "targetText": "Foes on your left and right", "rows": [
+        { "from": 1, "to": 4, "text": "1 damage" }, { "from": 5, "to": 9, "text": "2 damage" },
+        { "from": 10, "to": null, "text": "4 damage, and you gain a Treasure." } ] } }
+  ]
+}

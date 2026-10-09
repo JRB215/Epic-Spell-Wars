@@ -1,0 +1,32 @@
+{
+  "deck": "TREASURE",
+  "copiesEach": 1,
+  "note": "Text is copied from the owner's scans. 'countsAsGlyph' marks Treasures that count as a card of that glyph in each of your spells.",
+  "cards": [
+    { "id": "thinking-cap",            "name": "The Thinking Cap",                  "scan": "IMG_20261008_0001.png",  "text": "When you gain this Treasure, draw a card. Your hand size is increased by one." },
+    { "id": "wood-lords-clogs",        "name": "The Wood Lord's Clogs",             "scan": "IMG_20261008_00017.png", "countsAsGlyph": "PRIMAL",    "text": "This Treasure counts as a Primal card in each of your spells." },
+    { "id": "kingor-crown",            "name": "Kingor the Sharp Seer's Crown",     "scan": "IMG_20261008_0002.png",  "text": "Your Power Rolls have +1 for each different glyph in your spell." },
+    { "id": "phister-cannon",          "name": "The Phister Cannon",                "scan": "IMG_20261008_00028.png", "text": "Add a die to each Power Roll you make for a Delivery card." },
+    { "id": "double-downer",           "name": "The Double Downer",                 "scan": "IMG_20261008_0003.png",  "text": "When a foe plays a card with the same name as a card in your hand, you may discard that card. If you do, deal 2 damage to that player, and you heal 2 HP." },
+    { "id": "lets-end-this",           "name": "The \"Let's End This!\" Shit",       "scan": "IMG_20261008_0004.png",  "text": "Add 2 to your Power Rolls for each dead Wizard." },
+    { "id": "skullzor-ring-of-power",  "name": "Skullzor Ring of Power",            "scan": "IMG_20261008_0005.png",  "text": "Add two dice to each Power Roll you make for a Quality card." },
+    { "id": "slow-rollers-throne",     "name": "Slow Roller's Throne",              "scan": "IMG_20261008_0006.png",  "text": "When you are the last Wizard to act in a round, add a die to each of your Power Rolls." },
+    { "id": "methy-ions-backpack",     "name": "Methy-Ion's Backpack of Speed",     "scan": "IMG_20261008_0007.png",  "text": "Your spells have +10 Initiative. You may discard this Treasure to act last in a round." },
+    { "id": "lady-lucks-panties",      "name": "Lady Luck's Panties",               "scan": "IMG_20261008_0008.png",  "text": "Whenever you roll only one die, add 2 to your roll." },
+    { "id": "cheaters-handbook",       "name": "Cheater's Handbook",                "scan": "IMG_20261008_0009.png",  "text": "When you make a Power Roll, you may reroll one die." },
+    { "id": "jokers-wild-codpiece",    "name": "The Joker's Wild Codpiece",         "scan": "IMG_20261008_00090.png", "text": "When you play a spell that contains one or more Wild Magic cards, heal 2 HP and gain a Treasure." },
+    { "id": "lady-lucks-garters",      "name": "Lady Luck's Garters",               "scan": "IMG_20261008_0010.png",  "text": "When you reveal a spell, if you played two or fewer cards, add a random card from your hand to your spell." },
+    { "id": "crown-of-the-meek",       "name": "Crown of the Meek",                 "scan": "IMG_20261008_0011.png",  "text": "Each Dark card cast by a foe deals 1 damage to that foe before the card's effect resolves." },
+    { "id": "proton-gem",              "name": "Proton Gem",                        "scan": "IMG_20261008_0012.png",  "text": "You may add this card to your spell face up. It counts as a Wild Magic card but is not discarded." },
+    { "id": "plink-cannon",            "name": "Plink Cannon",                      "scan": "IMG_20261008_0013.png",  "text": "At the start of your turn, deal 1 damage to the Wizard on your left." },
+    { "id": "fools-gold",              "name": "Fool's Gold",                       "scan": "IMG_20261008_0014.png",  "text": "You heal 2 HP whenever a foe's Power Roll result is 4 or less." },
+    { "id": "moccasins-of-mana",       "name": "The Moccasins of Mana",             "scan": "IMG_20261008_0015.png",  "countsAsGlyph": "ARCANE",    "text": "This Treasure counts as an Arcane card in each of your spells." },
+    { "id": "desperation-stones",      "name": "Desperation Stones",                "scan": "IMG_20261008_0016.png",  "text": "If you have 9 or fewer HP, add a die to each of your Power Rolls." },
+    { "id": "amulet-of-maneg",         "name": "Amulet of Maneg",                   "scan": "IMG_20261008_0017.png",  "text": "When you make a Power Roll, heal 1 HP for each natural 6 you roll." },
+    { "id": "pumps-of-power",          "name": "The Pumps of Power",                "scan": "IMG_20261008_0018.png",  "countsAsGlyph": "ELEMENTAL", "text": "This Treasure counts as an Elemental card in each of your spells." },
+    { "id": "demon-shoes",             "name": "The Demon Shoes!",                  "scan": "IMG_20261008_0019.png",  "countsAsGlyph": "DARK",      "text": "This Treasure counts as a Dark card in each of your Spells." },
+    { "id": "big-book-of-awesomeness", "name": "Big Book of Awesomeness",           "scan": "IMG_20261008_0020.png",  "text": "Your Power Rolls have +2." },
+    { "id": "tricksters-boots",        "name": "The Trickster's Boots",             "scan": "IMG_20261008_0021.png",  "countsAsGlyph": "ILLUSION",  "text": "This Treasure counts as an Illusion card in each of your spells." },
+    { "id": "lady-lucks-brassiere",    "name": "Lady Luck's Brassiere",             "scan": "IMG_20261008_0022.png",  "text": "Discard this Treasure to reroll one of your Power Rolls. Then, gain a Treasure." }
+  ]
+}

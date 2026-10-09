@@ -1,0 +1,15 @@
+{
+  "deck": "DEAD_WIZARD",
+  "set": "base",
+  "note": "Text is copied from the owner's scans; copies per card are from the owner's own count list. The (c)2012 cards are the base set and total 25, matching the box. Dead Wizard cards help in the NEXT game, after the wizard died.",
+  "cards": [
+    { "id": "nectar-of-nirvana",   "name": "Nectar of Nirvana",                  "copies": 2, "scan": "IMG_20261008_0003.png", "text": "You're dead. Live with it." },
+    { "id": "slag-shangri-la",     "name": "Slag Shangri-La",                    "copies": 3, "scan": "IMG_20261008_0004.png", "text": "At the start of the next game, place one die on your character card. Add it to each Power Roll you make on the first turn, then remove the die." },
+    { "id": "afterlife-artifact",  "name": "Afterlife Artifact",                 "copies": 5, "scan": "IMG_20261008_0008.png", "text": "At the start of the next game, gain a Treasure." },
+    { "id": "giant-space-kingdom", "name": "The Giant Space Kingdom in the Sky", "copies": 4, "scan": "IMG_20261008_0009.png", "text": "You start the next game with +2 HP." },
+    { "id": "pixie-paradise",      "name": "Pixie Paradise",                     "copies": 3, "scan": "IMG_20261008_0010.png", "text": "After you've drawn your starting hand next game, draw two additional cards." },
+    { "id": "wild-furicorn-meadow","name": "Wild Furicorn Meadow",               "copies": 3, "scan": "IMG_20261008_0013.png", "text": "At the end of the current game, find a Wild Magic card and set it aside. After you draw your starting hand next game, add it to your hand." },
+    { "id": "backlash-from-beyond","name": "Backlash from Beyond",               "copies": 2, "scan": "IMG_20261008_0014.png", "text": "Deal 2 damage to a foe of your choice." },
+    { "id": "the-big-house",       "name": "The Big House",                      "copies": 3, "scan": "IMG_20261008_0015.png", "text": "You start the next game with +3 HP." }
+  ]
+}

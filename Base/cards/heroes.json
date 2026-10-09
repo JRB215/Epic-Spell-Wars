@@ -1,0 +1,24 @@
+{
+  "deck": "HERO",
+  "startingHp": 20,
+  "maxHp": 25,
+  "note": "All heroes play identically. They differ only in name and art. Each has two scans in 'Base/Character Sheets': 'board' (art beside the 25-to-1 HP track) and 'art' (full portrait card).",
+  "heroes": [
+    { "id": "princess-holiday", "name": "Princess Holiday", "title": "& her Furicorn",           "boardScan": "IMG_20261008_0001.png", "artScan": "IMG_20261008_0002.png" },
+    { "id": "fu-king",          "name": "Fu-King",          "title": "Dragon Lord",              "boardScan": "IMG_20261008_0003.png", "artScan": "IMG_20261008_0004.png" },
+    { "id": "manly-danger",     "name": "Manly Danger",     "title": "Rock God",                 "boardScan": "IMG_20261008_0005.png", "artScan": "IMG_20261008_0007.png" },
+    { "id": "sir-kitty",        "name": "Sir Kitty Purrrington", "title": "Cuddle Wizard",       "boardScan": "IMG_20261008_0006.png", "artScan": "IMG_20261008_0008.png" },
+    { "id": "krazztar",         "name": "Krazztar",         "title": "the Blood 'O'Mancer",      "boardScan": "IMG_20261008_0009.png", "artScan": "IMG_20261008_0011.png" },
+    { "id": "zanzabart",        "name": "Zanzabart",        "title": "the Slag Genie",           "boardScan": "IMG_20261008_0010.png", "artScan": "IMG_20261008_0012.png" },
+    { "id": "skullzor",         "name": "Skullzor",         "title": "",                         "boardScan": "IMG_20261008_0013.png", "artScan": "IMG_20261008_0016.png" },
+    { "id": "riggy-mortis",     "name": "Riggy Mortis",     "title": "the Bone Lich",            "boardScan": "IMG_20261008_0014.png", "artScan": "IMG_20261008_0015.png" },
+    { "id": "fey-ticklebottom", "name": "Fey Ticklebottom", "title": "the Enchanter",            "boardScan": "IMG_20261008_0017.png", "artScan": "IMG_20261008_0019.png" },
+    { "id": "jung-jung",        "name": "Jung Jung",        "title": "the Spirit Master",        "boardScan": "IMG_20261008_0018.png", "artScan": "IMG_20261008_0020.png" },
+    { "id": "hogs-the-house",   "name": "Hogs",             "title": "the House",                "boardScan": "IMG_20261008_0021.png", "artScan": "IMG_20261008_0023.png" },
+    { "id": "lady-lazervere",   "name": "Lady Lazervere",   "title": "of the Space Kingdom",     "boardScan": "IMG_20261008_0022.png", "artScan": "IMG_20261008_0024.png" },
+    { "id": "methy-ion",        "name": "Methy-Ion",        "title": "Wizard of Speed",          "boardScan": "IMG_20261008_0025.png", "artScan": "IMG_20261008_0027.png" },
+    { "id": "pisster",          "name": "Pisster",          "title": "the Pissed Wizard",        "boardScan": "IMG_20261008_0026.png", "artScan": "IMG_20261008_0028.png" },
+    { "id": "angelica",         "name": "Angelica Angel Face", "title": "the Angelic Angel of Misery", "boardScan": "IMG_20261008_0029.png", "artScan": "IMG_20261008_0031.png" },
+    { "id": "granny-flufferbutter", "name": "Granny Flufferbutter", "title": "the Sweetest Witch", "boardScan": "IMG_20261008_0030.png", "artScan": "IMG_20261008_0032.png" }
+  ]
+}

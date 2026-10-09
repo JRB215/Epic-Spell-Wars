@@ -1,0 +1,11 @@
+{
+  "deck": "WILD_MAGIC",
+  "copies": 8,
+  "note": "One design, 8 copies, shuffled into the Main Deck. The card has no glyph.",
+  "card": {
+    "id": "wild-magic",
+    "name": "Wild Magic",
+    "scan": "WildMagic x 8.png",
+    "text": "Use in place of any one card in a spell. Before resolving any card of the spell, reveal cards from the top of the Main Deck until you find a card of the type this Wild Magic card was used in place of. That card becomes part of your spell. Discard this Wild Magic card and the rest of the revealed cards."
+  }
+}
