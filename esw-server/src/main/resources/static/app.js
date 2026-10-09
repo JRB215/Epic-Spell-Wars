@@ -597,7 +597,7 @@ function renderTable(app) {
     <div class="foes">${foes.map((p) => foeSeatHtml(p, pickIds.includes(p.id))).join('')}</div>
     <div class="stage" id="stage">${stageHtml()}</div>
     <div class="log" id="log">${logLines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>
-    <div class="bottom">${me ? mineHtml(me, pickIds.includes(me.id)) : ''}<div class="hand ${choosing ? 'live' : ''}" id="hand">${handHtml()}</div></div></div>
+    <div class="bottom">${me ? mineHtml(me, pickIds.includes(me.id)) : ''}<div class="hand ${choosing ? 'live' : ''} ${me && !me.alive ? 'deadhand' : ''}" id="hand">${handHtml()}</div></div></div>
     ${gameOverHtml()}`;
   const log = $('#log'); if (log) log.scrollTop = log.scrollHeight;
   afterDraw(me);
@@ -639,6 +639,14 @@ function gameOverHtml() {
 
 function handHtml() {
   if (!game.you) return '<span class="muted">You are watching.</span>';
+  const mePlayer = game.players[game.you.index];
+  if (mePlayer && !mePlayer.alive) {
+    // A dead wizard has no hand: the Dead Wizard cards take its place, face up.
+    const dead = game.you.deadCards || [];
+    const note = '<div class="deadnote">You are dead. Your Dead Wizard cards give you a bonus at the start of the next game.</div>';
+    if (!dead.length) return note + '<span class="muted">You have no Dead Wizard cards yet. You draw one at the start of every round.</span>';
+    return note + dead.map((c) => cardHtml(c, '', 420)).join('');
+  }
   const choosing = prompt && prompt.kind === 'spell' && !promptSent;
   const picked = new Set([build.source, build.quality, build.delivery].filter((x) => x != null));
   const cards = choosing ? [...prompt.data.hand, ...prompt.data.gems] : game.you.hand;

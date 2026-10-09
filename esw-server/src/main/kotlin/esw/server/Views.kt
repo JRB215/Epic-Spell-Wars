@@ -93,6 +93,7 @@ fun gameView(game: Game, viewer: Int, seats: List<SeatInfo>): JsonObject {
         "you" to if (me == null) null else obj(
             "index" to viewer,
             "hand" to me.hand.map { cardView(it) },
+            "deadCards" to me.deadWizardCards.map { cardView(it) },
         ),
     )
 }

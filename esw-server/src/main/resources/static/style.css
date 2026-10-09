@@ -171,6 +171,8 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .mine .board .skull:empty::before { content: "\2620"; color: #fff; font-size: 1.2vw; line-height: 1; }
 .mine .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; }
 .mine .row .hp { font-family: Impact, sans-serif; font-size: 1.15rem; letter-spacing: .04em; }
+.hand.deadhand { flex-wrap: wrap; align-content: flex-end; gap: 6px 0; }
+.deadnote { flex: 0 0 100%; text-align: center; color: var(--muted); font-size: .95rem; padding-bottom: 4px; }
 .hand { flex: 1; min-width: 0; display: flex; justify-content: center; align-items: flex-end; padding-top: 6px; min-height: calc(var(--hand-w) * 1.4 + 10px); overflow: visible; }
 .hand .card { width: auto; flex: 0 1 var(--hand-w); min-width: 0; margin-left: -1.4vh; transform-origin: 50% 100%; transition: transform .15s, box-shadow .15s; }
 .hand .card:first-child { margin-left: 0; }
