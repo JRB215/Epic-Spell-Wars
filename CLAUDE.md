@@ -69,6 +69,9 @@ Give this file to Claude Code at the start of the new project (or put it in the 
 - Project layout: `esw-model` (card types and JSON loader), `esw-engine` (rules, no UI). Server and UI come next. The UI is plain HTML/JS served by the server, not Kotlin/JS.
 - Build and test with `.\gradlew.bat test` (Windows). Java 21 is installed; Gradle is downloaded by the wrapper.
 - `docs/RULES.md` lists every rule interpretation the engine makes. Keep it in step with the code.
+- Screens are tuned for 1920x1080 (the owner's request). The hand runs along the bottom and enlarges 35% on hover; whoever is casting takes over the middle with big cards that flip face up and glow as each effect fires, with a plain-words narration beside them. Hero boards show the real HP track with the skull counter on the right circle (positions measured in `TRACK` in `app.js`). Loose game pieces (tokens, marker, towers) live in `Base/` and are prepared by `tools/make_pieces.py`.
+- The blood marker (`marker.png`) and the towers are prepared but not used in play yet; the base game has no Blood mechanic.
+- Never `git add -A` here: loose pictures dropped into `Base/` or `Expansion 1/` must not be committed (this once pushed scans by mistake). Add named files only.
 - `tools/orient_scans.py` turns scans upright into `Base/cards-upright/`. Run it with `python tools/orient_scans.py`.
 
 ## Status and workflow notes

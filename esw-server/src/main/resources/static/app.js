@@ -14,6 +14,30 @@ const makeKey = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() 
 const myKey = tab.get('eswKey') || makeKey();
 tab.set('eswKey', myKey);
 
+// Pictures. Everything comes from the server's assets folder; if a picture is missing the page draws a plain stand-in.
+const PIECE = (name) => `/art/Pieces/${name}`;
+const BACKS = {
+  main: '/art/Card%20Back%20and%20Wild%20Card/IMG_20261008_0003',
+  treasure: '/art/Card%20Back%20and%20Wild%20Card/IMG_20261008_0001',
+  dead: '/art/Card%20Back%20and%20Wild%20Card/IMG_20261008_0002',
+};
+
+// Where each hit point sits on a hero board (measured from the real boards, as fractions of the board image).
+const TRACK = {
+  cols: [0.616, 0.724, 0.832, 0.940],
+  rows: [58, 176, 293, 409, 526].map((v) => v / 702),
+  bottomX: [601, 693, 781, 866, 953].map((v) => v / 1000),
+  bottomY: 644 / 702,
+};
+function skullPos(hp) {
+  if (hp >= 6) {
+    const i = Math.min(25, hp) <= 25 ? 25 - Math.min(25, hp) : 0;
+    return [TRACK.cols[i % 4] * 100, TRACK.rows[Math.floor(i / 4)] * 100];
+  }
+  if (hp >= 1) return [TRACK.bottomX[5 - hp] * 100, TRACK.bottomY * 100];
+  return [50, 50];
+}
+
 // ---------------------------------------------------------------- state
 let ws = null;
 let myName = local.get('eswName') || '';
@@ -26,9 +50,13 @@ let prompt = null;
 let promptSent = false;
 let build = { source: null, quality: null, delivery: null, target: null };
 let activePid = null;
-let resolving = null;
+let resolving = null;     // the card whose effect is going off right now: { player, card }
+let focus = null;         // whose spell holds the middle of the screen: { player, animateFlip }
+let feed = [];            // plain-words narration of what is happening this turn
+let locked = [];          // the spells that were locked in this round: { player, components, initiative }
 let vote = null;
 let winnerName = null;
+const hpShown = {};       // the hit points last drawn on my board, so the skull can slide
 const cardCache = {};
 let muted = local.get('eswMute') === '1';
 
@@ -57,9 +85,10 @@ function tone(freq, dur, type = 'square', vol = 0.06, delay = 0, slideTo = null)
 }
 const sound = {
   round() { tone(392, 0.12, 'triangle', 0.08); tone(523, 0.18, 'triangle', 0.08, 0.12); },
-  reveal() { tone(200, 0.35, 'sawtooth', 0.05, 0, 800); },
-  dice() { for (let i = 0; i < 6; i++) tone(300 + Math.random() * 500, 0.05, 'square', 0.04, i * 0.07); },
-  hit() { tone(140, 0.25, 'sawtooth', 0.09, 0, 50); },
+  reveal() { tone(200, 0.45, 'sawtooth', 0.05, 0, 900); },
+  card() { tone(520, 0.08, 'triangle', 0.07); tone(780, 0.14, 'triangle', 0.07, 0.07); },
+  dice() { for (let i = 0; i < 9; i++) tone(260 + Math.random() * 500, 0.05, 'square', 0.04, i * 0.08); tone(180, 0.2, 'sine', 0.08, 0.8); },
+  hit() { tone(140, 0.28, 'sawtooth', 0.1, 0, 45); tone(90, 0.2, 'square', 0.06, 0.03); },
   heal() { tone(660, 0.12, 'sine', 0.07); tone(880, 0.2, 'sine', 0.07, 0.1); },
   death() { tone(300, 0.9, 'sawtooth', 0.09, 0, 40); },
   win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, 'triangle', 0.09, i * 0.16)); },
@@ -87,11 +116,11 @@ function handle(m) {
   switch (m.t) {
     case 'welcome': break;
     case 'lobby':
-      lobby = m; room = null; game = null; prompt = null; vote = null; winnerName = null;
+      lobby = m; room = null; game = null; prompt = null; vote = null; winnerName = null; focus = null; feed = [];
       screen = 'lobby'; render(); break;
     case 'room':
       room = m;
-      if (m.state === 'LOBBY') { screen = 'room'; game = null; prompt = null; logLines = []; winnerName = null; vote = null; }
+      if (m.state === 'LOBBY') { screen = 'room'; game = null; prompt = null; logLines = []; winnerName = null; vote = null; focus = null; feed = []; }
       else screen = 'table';
       render(); break;
     case 'state': game = m.state; render(); break;
@@ -99,13 +128,14 @@ function handle(m) {
     case 'ev':
       game = m.state;
       if (m.event.text) logLines.push(m.event.text);
+      preEvent(m.event);
       render();
-      applyEvent(m.event);
+      postEvent(m.event);
       break;
     case 'prompt':
       prompt = m;
       promptSent = false;
-      if (m.kind === 'spell') build = { source: null, quality: null, delivery: null, target: null };
+      if (m.kind === 'spell') { build = { source: null, quality: null, delivery: null, target: null }; focus = null; }
       render(); break;
     case 'promptDone':
       if (prompt && prompt.pid === m.pid) { prompt = null; promptSent = false; render(); }
@@ -116,7 +146,42 @@ function handle(m) {
   }
 }
 
-// ---------------------------------------------------------------- effects
+// ---------------------------------------------------------------- what is happening (narration) and effects
+function nameOf(pid) { return game && game.players[pid] ? game.players[pid].name : 'Someone'; }
+
+const NOT_NARRATED = new Set(['roundStarted', 'gameStarted', 'matchStarted', 'spellsLocked', 'handsDealt', 'gameWon', 'matchWon']);
+
+function cardTextFor(e) {
+  const p = game && game.players[e.player];
+  const sc = p && p.spell ? p.spell.cards.find((c) => c.card && c.card.name === e.card) : null;
+  const text = sc ? sc.card.text : '';
+  return text.length > 170 ? text.slice(0, 167) + '...' : text;
+}
+
+function narration(e) {
+  switch (e.k) {
+    case 'turnStarted': return `${nameOf(e.player)} begins to cast...`;
+    case 'spellRevealed': return `${nameOf(e.player)} reveals ${e.cards.join(' + ') || 'nothing'}`;
+    case 'cardResolving': return `${e.card}: ${cardTextFor(e)}`;
+    default: return e.text;
+  }
+}
+
+/** Updates what the screen is about to show. Runs before the table is drawn. */
+function preEvent(e) {
+  switch (e.k) {
+    case 'roundStarted': focus = null; feed = []; locked = []; resolving = null; activePid = null; break;
+    case 'gameStarted': focus = null; feed = []; winnerName = null; break;
+    case 'spellsLocked': locked = e.spells; break;
+    case 'turnStarted': focus = { player: e.player, animateFlip: false }; feed = []; resolving = null; activePid = e.player; break;
+    case 'spellRevealed': if (focus) focus.animateFlip = true; break;
+    case 'cardResolving': resolving = { player: e.player, card: e.card }; break;
+    default: break;
+  }
+  if (focus && e.text !== '' && !NOT_NARRATED.has(e.k)) feed.push({ text: narration(e), k: e.k });
+  if (feed.length > 12) feed.shift();
+}
+
 function banner(text, big = false, ms = 1700) {
   const el = $('#banner');
   el.textContent = text;
@@ -125,83 +190,80 @@ function banner(text, big = false, ms = 1700) {
   banner.timer = setTimeout(() => el.classList.add('hidden'), ms);
 }
 
-function seatRect(pid) {
-  const el = document.querySelector(`.seat[data-pid="${pid}"]`);
-  return el ? el.getBoundingClientRect() : null;
-}
+function seatEl(pid) { return document.querySelector(`[data-pid="${pid}"]`); }
 
 function floatText(pid, text, cls) {
-  const r = seatRect(pid);
-  if (!r) return;
+  const el0 = seatEl(pid);
+  if (!el0) return;
+  const r = el0.getBoundingClientRect();
   const el = document.createElement('div');
   el.className = 'float ' + cls;
   el.textContent = text;
-  el.style.position = 'fixed';
   el.style.left = (r.left + r.width / 2) + 'px';
-  el.style.top = (r.top + r.height * 0.3) + 'px';
+  el.style.top = (r.top + r.height * 0.25) + 'px';
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1700);
+  setTimeout(() => el.remove(), 1900);
 }
 
 function shake(pid) {
-  const el = document.querySelector(`.seat[data-pid="${pid}"]`);
+  const el = seatEl(pid);
   if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 400); }
 }
 
-function nameOf(pid) { return game && game.players[pid] ? game.players[pid].name : 'Someone'; }
+function flash(kind) {
+  const el = document.createElement('div');
+  el.className = 'flash ' + kind;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
+
+const PIPS = {
+  1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]], 4: [[1, 1], [1, 3], [3, 1], [3, 3]],
+  5: [[1, 1], [1, 3], [2, 2], [3, 1], [3, 3]], 6: [[1, 1], [2, 1], [3, 1], [1, 3], [2, 3], [3, 3]],
+};
+const face = (n) => `<div class="face f${n}">${PIPS[n].map(([r, c]) => `<i style="grid-row:${r};grid-column:${c}"></i>`).join('')}</div>`;
+const cubeHtml = () => `<div class="cube rolling" style="animation-duration:${0.45 + Math.random() * 0.25}s">${[1, 2, 3, 4, 5, 6].map(face).join('')}</div>`;
+const FACE_TURN = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(-90deg)', 4: 'rotateY(90deg)', 2: 'rotateX(-90deg)', 5: 'rotateX(90deg)' };
 
 function showDice(e) {
   const box = $('#dice');
-  const faces = e.dice.length;
   box.className = '';
-  const who = `${esc(nameOf(e.player))} &mdash; ${esc(e.reason)}`;
-  const dieHtml = (v, rolling) => `<div class="die ${rolling ? 'rolling' : ''}">${v}</div>`;
-  box.innerHTML = `<div class="who">${who}</div><div class="row">${e.dice.map(() => dieHtml('?', true)).join('')}</div><div class="total"></div>`;
+  box.innerHTML = `<div class="who">${esc(nameOf(e.player))} &mdash; ${esc(e.reason)}</div>
+    <div class="dice3d">${e.dice.map(cubeHtml).join('')}</div><div class="total"></div>`;
   sound.dice();
-  let n = 0;
-  const spin = setInterval(() => {
-    n++;
-    box.querySelectorAll('.die').forEach((d) => { d.textContent = 1 + Math.floor(Math.random() * 6); });
-    if (n > 6) {
-      clearInterval(spin);
-      box.querySelector('.row').innerHTML = e.dice.map((v) => dieHtml(v, false)).join('');
-      const bonus = e.total !== e.dice.reduce((a, b) => a + b, 0);
-      box.querySelector('.total').textContent = (faces > 1 || bonus) ? `Total ${e.total}` : '';
-    }
-  }, 100);
+  clearTimeout(showDice.settle);
+  showDice.settle = setTimeout(() => {
+    box.querySelectorAll('.cube').forEach((c, i) => {
+      c.classList.remove('rolling');
+      c.style.transform = `rotateX(-24deg) rotateY(-28deg) ${FACE_TURN[e.dice[i]] || ''}`;
+    });
+    const sum = e.dice.reduce((a, b) => a + b, 0);
+    const t = box.querySelector('.total');
+    if (t) t.textContent = e.dice.length > 1 || e.total !== sum ? `Total ${e.total}` : '';
+  }, 950);
   clearTimeout(showDice.timer);
-  showDice.timer = setTimeout(() => { clearInterval(spin); box.classList.add('hidden'); }, 1650);
+  showDice.timer = setTimeout(() => box.classList.add('hidden'), 2500);
 }
 
-function showSpotlight(pid) {
-  const p = game && game.players[pid];
-  if (!p || !p.spell) return;
-  const cards = p.spell.cards.filter((c) => c.card);
-  if (!cards.length) return;
-  const box = $('#spotlight');
-  box.className = '';
-  box.innerHTML = `<div class="who">${esc(p.name)} casts!</div><div class="cards">${cards.map((c) => cardHtml(c.card, '', 420)).join('')}</div>`;
-  sound.reveal();
-  clearTimeout(showSpotlight.timer);
-  showSpotlight.timer = setTimeout(() => box.classList.add('hidden'), 2200);
-}
-
-function applyEvent(e) {
+/** Runs after the table is drawn: banners, floating numbers, sounds and dice. */
+function postEvent(e) {
+  const mine = game && game.you ? game.you.index : -1;
   switch (e.k) {
-    case 'roundStarted': activePid = null; resolving = null; banner(e.text, false, 1200); sound.round(); break;
-    case 'gameStarted': winnerName = null; banner(e.text, true, 1400); break;
+    case 'roundStarted': banner(e.text, false, 1200); sound.round(); break;
+    case 'gameStarted': banner(e.text, true, 1400); break;
     case 'spellsLocked': banner('All spells are locked in!', false, 1200); break;
-    case 'turnStarted': activePid = e.player; resolving = null; render(); banner(`${nameOf(e.player)}'s turn`, false, 800); break;
-    case 'spellRevealed': showSpotlight(e.player); break;
-    case 'cardResolving': resolving = { player: e.player, card: e.card }; render(); banner(`${nameOf(e.player)}: ${e.card}`, false, 1500); break;
+    case 'turnStarted': banner(`${nameOf(e.player)}'s turn`, false, 900); break;
+    case 'spellRevealed': sound.reveal(); break;
+    case 'cardResolving': sound.card(); break;
     case 'dice': showDice(e); break;
     case 'damage':
       floatText(e.target, `-${e.amount}`, 'dmg'); shake(e.target);
+      if (e.target === mine) flash('dmg');
       if (Date.now() - lastHitSound > 350) { sound.hit(); lastHitSound = Date.now(); }
       break;
-    case 'heal': floatText(e.player, `+${e.amount}`, 'heal'); sound.heal(); break;
+    case 'heal': floatText(e.player, `+${e.amount}`, 'heal'); if (e.player === mine) flash('heal'); sound.heal(); break;
     case 'treasureGained': floatText(e.player, `+ ${e.treasure}`, 'gain'); break;
-    case 'died': banner(`${nameOf(e.player)} is dead!`, true, 2000); sound.death(); break;
+    case 'died': banner(`${nameOf(e.player)} is dead!`, true, 2100); sound.death(); break;
     case 'gameWon': banner(e.text, true, 3200); sound.win(); break;
     case 'matchWon': winnerName = nameOf(e.winner); sound.win(); render(); break;
     default: break;
@@ -221,10 +283,11 @@ function cardHtml(c, extra = '', width = 300) {
     ${img}<div class="txt"><div class="nm">${esc(c.name)}</div><div class="ty">${type}${glyph}</div><div>${esc(c.text)}</div>${ini}</div><div class="gl"></div></div>`;
 }
 
+// Hovering a card in the hand, spotlight or builder already enlarges it; elsewhere a big preview appears.
 document.addEventListener('mouseover', (e) => {
   const el = e.target.closest ? e.target.closest('[data-cid]') : null;
   const zoom = $('#zoom');
-  if (!el) { zoom.classList.add('hidden'); return; }
+  if (!el || el.closest('.hand, .fc, .choices, .bslot')) { zoom.classList.add('hidden'); return; }
   const c = cardCache[el.dataset.cid];
   if (!c) return;
   zoom.innerHTML = cardHtml(c, '', 640);
@@ -315,31 +378,87 @@ function renderRoom(app) {
 // ---------------------------------------------------------------- the table
 function hpColor(p) { const r = p.hp / p.maxHp; return r > 0.5 ? 'var(--green)' : r > 0.25 ? 'var(--gold)' : 'var(--red)'; }
 
-function slotHtml(p, sc) {
-  const isResolving = resolving && resolving.player === p.id && sc.card && sc.card.name === resolving.card;
-  const cls = `slot s-${sc.slot} ${isResolving ? 'resolving' : ''} ${sc.resolved && !isResolving ? 'done' : ''}`;
-  if (!sc.card) return `<div class="${cls}"><div class="back">?</div></div>`;
-  return `<div class="${cls}">${cardHtml(sc.card, 'small', 200)}</div>`;
+function lwsHtml(n) {
+  return `<span class="lws" title="Last Wizard Standing tokens">${[0, 1].map((i) => (i < n
+    ? `<span class="tk full"><img src="${PIECE('lws')}" alt="" onerror="this.style.display='none';this.parentNode.style.background='var(--gold)'"></span>`
+    : '<span class="tk"></span>')).join('')}</span>`;
 }
 
-function seatHtml(p, pickable) {
-  const you = game.you && game.you.index === p.id;
-  const cls = ['seat', you ? 'me' : '', p.alive ? '' : 'dead', activePid === p.id ? 'active' : '', pickable ? 'pickable' : ''].join(' ');
-  const pct = Math.max(0, Math.round((p.hp / p.maxHp) * 100));
-  const tokens = [0, 1].map((i) => `<span class="token ${i < p.tokens ? '' : 'empty'}"></span>`).join('');
-  const chips = p.treasures.map((t) => { cardCache[t.id] = t; return `<span class="chip" data-cid="${esc(t.id)}">${esc(t.name)}</span>`; }).join('')
+function chipsHtml(p) {
+  return p.treasures.map((t) => { cardCache[t.id] = t; return `<span class="chip" data-cid="${esc(t.id)}">${esc(t.name)}</span>`; }).join('')
     + (p.deadCards ? `<span class="chip dead">${p.deadCards} dead wizard card${p.deadCards > 1 ? 's' : ''}</span>` : '');
-  const order = { SOURCE: 0, QUALITY: 1, DELIVERY: 2 };
-  const spell = p.spell ? [...p.spell.cards].sort((a, b) => order[a.slot] - order[b.slot]) : [];
-  const tags = `${p.bot ? '<span class="tag">bot</span>' : ''}${!p.connected && !p.bot ? '<span class="tag">disconnected</span>' : ''}${p.away ? '<span class="tag">bot is playing</span>' : ''}`;
+}
+
+function foeSeatHtml(p, pickable) {
+  const cls = ['fseat', p.alive ? '' : 'dead', activePid === p.id ? 'active' : '', pickable ? 'pickable' : ''].join(' ');
+  const pct = Math.max(0, Math.round((p.hp / p.maxHp) * 100));
+  const tags = `${p.bot ? 'bot' : ''}${!p.connected && !p.bot ? 'disconnected' : ''}${p.away ? ' (bot is playing)' : ''}`;
+  const mini = p.spell ? p.spell.cards.map(() => `<i class="${p.spell.revealed ? 'up' : ''}"></i>`).join('') : '';
   return `<div class="${cls}" data-pid="${p.id}">
-    <div class="seat-head"><img class="portrait" src="${esc(p.hero.art)}?w=160" alt="" onerror="this.style.visibility='hidden'">
-      <div class="who"><b>${esc(p.name)}${you ? ' (you)' : ''}</b><small>${esc(p.hero.name)}${p.hero.title ? ', ' + esc(p.hero.title) : ''}</small></div>
-      <div class="tokens" title="Last Wizard Standing tokens">${tokens}</div></div>
-    <div class="hpbar"><i style="width:${pct}%;background:${hpColor(p)}"></i><span>${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span></div>
-    <div class="chips">${chips}</div>
-    <div class="spell-row">${spell.map((sc) => slotHtml(p, sc)).join('')}</div>
-    <div class="meta"><span>${p.alive ? 'Hand: ' + p.handCount : ''}</span><span>${tags}</span></div></div>`;
+    <div class="top"><img class="portrait" src="${esc(p.hero.art)}?w=140" alt="" onerror="this.style.visibility='hidden'">
+      <div class="who"><b>${esc(p.name)}</b><small>${esc(p.hero.name)}${p.hero.title ? ', ' + esc(p.hero.title) : ''}</small></div>${lwsHtml(p.tokens)}</div>
+    <div class="hprow"><img class="sk" src="${PIECE('skull')}" alt="" onerror="this.style.display='none'">
+      <div class="hpbar"><i style="width:${pct}%;background:${hpColor(p)}"></i><span>${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span></div></div>
+    <div class="chips">${chipsHtml(p)}</div>
+    <div class="fmeta"><span>${p.alive ? 'Hand ' + p.handCount : ''}</span><span class="mini-spell">${mini}</span><span>${esc(tags)}</span></div></div>`;
+}
+
+function mineHtml(p, pickable) {
+  const [x, y] = skullPos(hpShown[p.id] ?? p.hp);
+  const cls = ['mine', p.alive ? '' : 'dead', pickable ? 'pickable' : ''].join(' ');
+  return `<div class="${cls}" data-pid="${p.id}"><div class="board">
+      <img class="bd" src="${esc(p.hero.board)}?w=700" alt="" onerror="this.style.minHeight='140px'">
+      ${p.alive ? `<img class="skull" id="mySkull" src="${PIECE('skull')}" alt="" style="left:${x}%;top:${y}%" onerror="this.style.display='none'">` : ''}</div>
+    <div class="row"><span class="hp">${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span>${lwsHtml(p.tokens)}</div>
+    <div class="chips">${chipsHtml(p)}</div></div>`;
+}
+
+function turnbarHtml() {
+  const chips = locked.map((s) => {
+    const p = game.players[s.player];
+    const cls = ['tchip', activePid === s.player ? 'now' : '', p && p.acted ? 'done' : ''].join(' ');
+    return `<span class="${cls}">${esc(nameOf(s.player))} &middot; ${s.components} card${s.components === 1 ? '' : 's'} &middot; Initiative ${s.initiative}</span>`;
+  }).join('');
+  const d = game.decks;
+  const pile = (img, n, label) => `<div class="pile"><img src="${img}?w=80" alt="" onerror="this.style.display='none'">${label} ${n}</div>`;
+  return `<div class="turnbar">${chips}<span class="piles">${pile(BACKS.main, d.main, 'Deck')}${pile(BACKS.treasure, d.treasure, 'Treasures')}${pile(BACKS.dead, d.deadWizard, 'Dead')}<div class="pile">Discard<br>${d.mainDiscard}</div></span></div>`;
+}
+
+function fcHtml(sc, flipped) {
+  const active = resolving && focus && resolving.player === focus.player && sc.card && sc.card.name === resolving.card;
+  const done = sc.resolved && !active;
+  const cls = ['fc', flipped ? 'flipped' : '', active ? 'active' : '', done ? 'done' : ''].join(' ');
+  return `<div class="${cls}"><div class="fc-in">
+    <div class="fc-back"><img src="${BACKS.main}?w=400" alt=""></div>
+    <div class="fc-front">${sc.card ? cardHtml(sc.card, '', 560) : ''}</div></div><div class="badge">&#10003;</div></div>`;
+}
+
+function focusHtml() {
+  const p = game.players[focus.player];
+  const order = { SOURCE: 0, QUALITY: 1, DELIVERY: 2 };
+  const live = p.spell ? [...p.spell.cards].sort((a, b) => order[a.slot] - order[b.slot]) : [];
+  // The engine clears a spell the moment its turn ends; keep showing the last cards until the next turn begins.
+  if (live.length) focus.last = live;
+  const cards = live.length ? live : (focus.last || []).map((c) => ({ ...c, resolved: true }));
+  const flipped = (live.length ? !!(p.spell && p.spell.revealed) : true) && !focus.animateFlip;
+  const ini = locked.find((s) => s.player === focus.player);
+  const last = feed.length - 1;
+  return `<div class="focus"><div class="fhead"><img src="${esc(p.hero.art)}?w=120" alt="" onerror="this.style.visibility='hidden'">
+      <span>${esc(p.name)} casts!</span>${ini ? `<small>Initiative ${ini.initiative}</small>` : ''}</div>
+    <div class="fbody"><div class="fcards" id="fcards">${cards.map((sc) => fcHtml(sc, flipped)).join('') || '<span class="muted">No cards played.</span>'}</div>
+    <div class="feed">${feed.slice(-6).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div></div>`;
+}
+
+function stageHtml() {
+  const parts = [];
+  if (vote) parts.push(voteHtml());
+  const building = prompt && prompt.kind === 'spell';
+  if (building) { parts.push(promptHtml()); return parts.join(''); }
+  parts.push(turnbarHtml());
+  if (prompt) parts.push(promptHtml());
+  if (focus && game.players[focus.player]) parts.push(focusHtml());
+  else if (!prompt) parts.push(`<div class="waiting">${game.round ? 'Round ' + game.round + ': ' : ''}the wizards are choosing their spells...</div>`);
+  return parts.join('');
 }
 
 function renderTable(app) {
@@ -348,18 +467,34 @@ function renderTable(app) {
   const pickIds = prompt && prompt.kind === 'player' && !promptSent ? prompt.data.candidates : [];
   const foes = game.players.filter((p) => p.id !== youIdx);
   const me = game.players[youIdx];
-  const d = game.decks;
+  const choosing = prompt && prompt.kind === 'spell' && !promptSent;
   app.innerHTML = `<div class="table">
-    <div class="topbar"><b>EPIC SPELL WARS</b><span>Game ${game.game} &middot; Round ${game.round}</span>
-      <span class="muted">Deck ${d.main} &middot; Discard ${d.mainDiscard} &middot; Treasures ${d.treasure}</span><span class="spacer"></span>
+    <div class="topbar"><b>EPIC SPELL WARS</b><span>Game ${game.game} &middot; Round ${game.round}</span><span class="spacer"></span>
       <button class="btn secondary" id="mute">${muted ? 'Sound off' : 'Sound on'}</button><button class="btn secondary" id="leave">Leave</button></div>
-    <div class="stage"><div class="foes">${foes.map((p) => seatHtml(p, pickIds.includes(p.id))).join('')}</div></div>
+    <div class="foes">${foes.map((p) => foeSeatHtml(p, pickIds.includes(p.id))).join('')}</div>
+    <div class="stage" id="stage">${stageHtml()}</div>
     <div class="log" id="log">${logLines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>
-    <div class="bottom">${voteHtml()}${promptHtml()}
-      <div class="me-panel">${me ? seatHtml(me, pickIds.includes(me.id)) : ''}<div class="hand" id="hand">${handHtml()}</div></div></div></div>
+    <div class="bottom">${me ? mineHtml(me, pickIds.includes(me.id)) : ''}<div class="hand ${choosing ? 'live' : ''}" id="hand">${handHtml()}</div></div></div>
     ${gameOverHtml()}`;
   const log = $('#log'); if (log) log.scrollTop = log.scrollHeight;
+  afterDraw(me);
   wireTable();
+}
+
+/** Small animations that need the new elements to exist first. */
+function afterDraw(me) {
+  if (focus && focus.animateFlip) {
+    focus.animateFlip = false;
+    setTimeout(() => document.querySelectorAll('#fcards .fc').forEach((el, i) => setTimeout(() => el.classList.add('flipped'), i * 220)), 150);
+  }
+  if (me && me.alive) {
+    const skull = $('#mySkull');
+    if (skull && hpShown[me.id] !== undefined && hpShown[me.id] !== me.hp) {
+      const [x, y] = skullPos(me.hp);
+      setTimeout(() => { skull.style.left = x + '%'; skull.style.top = y + '%'; }, 60);
+    }
+    hpShown[me.id] = me.hp;
+  }
 }
 
 function voteHtml() {
@@ -371,7 +506,7 @@ function voteHtml() {
 function gameOverHtml() {
   if (!room || room.state !== 'FINISHED') return '';
   const rows = [...game.players].sort((a, b) => b.tokens - a.tokens)
-    .map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(p.hero.name)}</td><td>${'&#9679; '.repeat(p.tokens) || '-'}</td></tr>`).join('');
+    .map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(p.hero.name)}</td><td>${lwsHtml(p.tokens)}</td></tr>`).join('');
   return `<div class="gameover"><div class="box"><h1>${winnerName ? esc(winnerName) + ' wins!' : 'Match over'}</h1>
     <table>${rows}</table>
     <div class="top-actions" style="justify-content:center">${room.owner ? '<button class="btn" id="rematch">Play again</button>' : '<span class="muted">Waiting for the host...</span>'}
@@ -386,7 +521,7 @@ function handHtml() {
   if (!cards.length) return '<span class="muted">No cards in hand.</span>';
   const order = { SOURCE: 0, QUALITY: 1, DELIVERY: 2, WILD_MAGIC: 3, TREASURE: 4 };
   return [...cards].sort((a, b) => (order[a.type] ?? 9) - (order[b.type] ?? 9))
-    .map((c) => cardHtml(c, `${choosing ? 'clickable' : ''} ${picked.has(c.uid) ? 'picked' : ''}`, 280)).join('');
+    .map((c) => cardHtml(c, picked.has(c.uid) ? 'picked' : '', 420)).join('');
 }
 
 function promptHtml() {
@@ -398,13 +533,13 @@ function promptHtml() {
     const slotBox = (key, label) => {
       const uid = build[key];
       const c = uid != null ? all.find((x) => x.uid === uid) : null;
-      return `<div class="bslot s-${label.toUpperCase()} ${build.target === key ? 'target' : ''}" data-slot="${key}">${c ? cardHtml(c, '', 220) : label}</div>`;
+      return `<div class="bslot s-${label.toUpperCase()} ${build.target === key ? 'target' : ''}" data-slot="${key}">${c ? cardHtml(c, '', 520) : label}</div>`;
     };
     const any = build.source != null || build.quality != null || build.delivery != null;
     return `<div class="prompt"><h3>Build your spell</h3>
-      <p class="muted" style="margin:0 0 8px">Click cards in your hand to fill the slots. Wild Magic fills the highlighted slot (click a slot to choose it). You may play 1 to 3 cards, one of each type.</p>
+      <p class="muted" style="margin:0 0 10px">Click or drag cards from your hand into the slots. You may play 1 to 3 cards, one of each type. Wild Magic fills the highlighted slot (click a slot to choose it).</p>
       <div class="builder">${slotBox('source', 'Source')}${slotBox('quality', 'Quality')}${slotBox('delivery', 'Delivery')}
-      <button class="btn" id="cast" ${any || !all.length ? '' : 'disabled'}>Cast it!</button></div></div>`;
+      <button class="btn big" id="cast" ${any || !all.length ? '' : 'disabled'}>Cast it!</button></div></div>`;
   }
   const head = (text) => `<div class="prompt"><h3>${esc(text)}</h3>`;
   if (promptSent) return '';
@@ -412,7 +547,7 @@ function promptHtml() {
     return `${head(d.reason)}<p class="muted" style="margin:0">Click a wizard, or pick below.</p><div class="choices">${d.candidates.map((id) => `<button class="btn" data-pick="${id}">${esc(nameOf(id))}</button>`).join('')}</div></div>`;
   }
   if (prompt.kind === 'treasure' || prompt.kind === 'card') {
-    return `${head(d.reason)}<div class="choices">${d.candidates.map((c) => `<div data-pick="${c.uid}">${cardHtml(c, 'clickable', 260)}</div>`).join('')}</div></div>`;
+    return `${head(d.reason)}<div class="choices">${d.candidates.map((c) => `<div data-pick="${c.uid}">${cardHtml(c, '', 420)}</div>`).join('')}</div></div>`;
   }
   if (prompt.kind === 'option') {
     return `${head(d.prompt)}<div class="choices">${d.options.map((o, i) => `<button class="btn" data-pick="${i}">${esc(o)}</button>`).join('')}</div></div>`;
@@ -430,6 +565,26 @@ function answer(value) {
   render();
 }
 
+function placeCard(uid, wantedSlot) {
+  const all = [...prompt.data.hand, ...prompt.data.gems];
+  const c = all.find((x) => x.uid === uid);
+  if (!c) return;
+  const keys = ['source', 'quality', 'delivery'];
+  const used = keys.find((k) => build[k] === uid);
+  if (used && !wantedSlot) { build[used] = null; return render(); }
+  const typed = { SOURCE: 'source', QUALITY: 'quality', DELIVERY: 'delivery' }[c.type];
+  if (typed) {
+    if (wantedSlot && wantedSlot !== typed) { toast(`That is a ${c.type.toLowerCase()} card. It goes in the ${typed} slot.`); return; }
+    if (used) build[used] = null;
+    build[typed] = uid; build.target = null; return render();
+  }
+  // Wild Magic or a Proton Gem can fill any slot.
+  const free = wantedSlot || (build.target && build[build.target] == null ? build.target : keys.find((k) => build[k] == null));
+  if (!free) { toast('All three slots are full. Click a slot to clear it first.'); return; }
+  if (used) build[used] = null;
+  build[free] = uid; build.target = null; render();
+}
+
 function wireTable() {
   wireTop();
   const leave = () => { if (confirm('Leave this game? A bot will take your seat.') || (room && room.state === 'FINISHED')) send({ t: 'leaveGame' }); };
@@ -442,27 +597,20 @@ function wireTable() {
   if (!prompt || promptSent) return;
 
   if (prompt.kind === 'spell') {
-    const all = [...prompt.data.hand, ...prompt.data.gems];
-    document.querySelectorAll('#hand .card.clickable').forEach((el) => {
-      el.onclick = () => {
-        const uid = Number(el.dataset.uid);
-        const c = all.find((x) => x.uid === uid);
-        if (!c) return;
-        const used = ['source', 'quality', 'delivery'].find((k) => build[k] === uid);
-        if (used) { build[used] = null; return render(); }
-        const key = { SOURCE: 'source', QUALITY: 'quality', DELIVERY: 'delivery' }[c.type];
-        if (key) { build[key] = uid; build.target = null; return render(); }
-        const free = build.target && build[build.target] == null ? build.target : ['source', 'quality', 'delivery'].find((k) => build[k] == null);
-        if (!free) { toast('All three slots are full. Click a slot to clear it first.'); return; }
-        build[free] = uid; build.target = null; render();
-      };
+    document.querySelectorAll('#hand .card').forEach((el) => {
+      el.draggable = true;
+      el.onclick = () => placeCard(Number(el.dataset.uid), null);
+      el.ondragstart = (ev) => { ev.dataTransfer.setData('text/plain', el.dataset.uid); ev.dataTransfer.effectAllowed = 'move'; };
     });
     document.querySelectorAll('.bslot').forEach((el) => {
+      const key = el.dataset.slot;
       el.onclick = () => {
-        const key = el.dataset.slot;
         if (build[key] != null) { build[key] = null; build.target = key; } else build.target = build.target === key ? null : key;
         render();
       };
+      el.ondragover = (ev) => { ev.preventDefault(); el.classList.add('over'); };
+      el.ondragleave = () => el.classList.remove('over');
+      el.ondrop = (ev) => { ev.preventDefault(); el.classList.remove('over'); placeCard(Number(ev.dataTransfer.getData('text/plain')), key); };
     });
     const cast = $('#cast');
     if (cast) cast.onclick = () => answer({ source: build.source, quality: build.quality, delivery: build.delivery });
@@ -471,7 +619,7 @@ function wireTable() {
   document.querySelectorAll('[data-pick]').forEach((el) => { el.onclick = () => answer(Number(el.dataset.pick)); });
   document.querySelectorAll('[data-yes]').forEach((el) => { el.onclick = () => answer(el.dataset.yes === '1'); });
   if (prompt.kind === 'player') {
-    document.querySelectorAll('.seat.pickable').forEach((el) => { el.onclick = () => answer(Number(el.dataset.pid)); });
+    document.querySelectorAll('.fseat.pickable, .mine.pickable').forEach((el) => { el.onclick = () => answer(Number(el.dataset.pid)); });
   }
 }
 
