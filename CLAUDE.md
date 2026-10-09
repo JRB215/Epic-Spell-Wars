@@ -63,9 +63,12 @@ Give this file to Claude Code at the start of the new project (or put it in the 
 - Folders: `Base/` holds the base game. `Expansion 1/` holds the (c)2015 expansion. Raw scans and PDFs are never committed (see `.gitignore`).
 - Source, Quality and Delivery: 20 different cards each, 2 copies of each (40 per deck). Wild Magic: 1 design, 8 copies.
 - Treasures: 25 different cards, 1 copy each (matches the box).
-- Dead Wizards: the owner's pile was a mix. The (c)2012 cards are base (25 cards, counts in `Base/cards/dead-wizard-counts.json`). The (c)2015 cards use a Blood mechanic and live in `Expansion 1/`. The engine loads only the base set.
+- Dead Wizards: the owner's pile was a mix. The (c)2012 cards are base (25 cards, counts in `Base/cards/dead-wizards.json`). The (c)2015 cards use a Blood mechanic and live in `Expansion 1/`. The engine loads only the base set.
 - Heroes: all 16 hero sheets are treated as base game. Heroes play identically (20 HP, max 25), so only art and name differ.
-- A "game" means one round (one winner earns a token); a "match" is first to 2 tokens.
+- A "game" is a series of rounds that lasts until one wizard is left alive; that wizard earns a token. A "match" is first to 2 tokens. HP carries between rounds and resets at the start of each game. (This is my reading of the rulebook and the Dead Wizard cards, not yet confirmed by the owner.)
+- Project layout: `esw-model` (card types and JSON loader), `esw-engine` (rules, no UI). Server and UI come next. The UI is plain HTML/JS served by the server, not Kotlin/JS.
+- Build and test with `.\gradlew.bat test` (Windows). Java 21 is installed; Gradle is downloaded by the wrapper.
+- `docs/RULES.md` lists every rule interpretation the engine makes. Keep it in step with the code.
 - `tools/orient_scans.py` turns scans upright into `Base/cards-upright/`. Run it with `python tools/orient_scans.py`.
 
 ## How the owner likes to work

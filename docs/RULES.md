@@ -29,9 +29,10 @@ This is a working summary in our own words. If it disagrees with the rulebook, t
 
 ## Winning
 
-- Defeating all your foes in a round earns a **Last Wizard Standing token**.
+- A **game** is played in rounds until only one wizard is left alive. That wizard earns a **Last Wizard Standing token**.
 - **Two tokens wins the match.**
 - If a wizard kills themselves and nobody is left alive, that wizard still gets the token.
+- HP carries from round to round inside a game. At the start of each new game, everyone is back to 20 HP, hands and Treasures are discarded, and Dead Wizard bonuses are applied.
 
 ## A round
 
@@ -98,6 +99,42 @@ Every component has one: **Arcane, Dark, Elemental, Illusion, Primal**. Many eff
 A 4-player game. One player plays 2 components. The other three each play 3 and announce Initiatives 18, 14 and 14. The 2-component player acts first. Then 18 acts. Then the two 14s roll a die to break the tie.
 
 The 18 player's spell: Source "Bleemax Brainiac's" reveals the top 2 cards of the Main Deck and adds any matching the spell's glyphs. This adds a Quality ("Mysterious") and a Delivery ("Fist o' Nature"). Two Qualities resolve in the player's chosen order. Mind-Altering deals 3 to a random foe and gives both players a Treasure. Mysterious deals 1 per different glyph in the spell plus 1 per Treasure. Pact with the Devil targets the strongest foe and makes a Dark Power Roll.
+
+## Interpretations the engine makes
+
+The rulebook and cards leave these open. The engine picks the simplest reading. Tell the owner if one is wrong.
+
+**Seats and targets**
+- "Left" is the next living seat after you; "right" is the previous one. A foe is any living wizard other than you.
+- Strongest = most HP, weakest = fewest HP. A tie among foes is broken by the caster's choice.
+- Random foe: foes are lined up from the caster's left and share the numbers 1-6 equally (3 foes get two numbers each). If 6 does not divide evenly (4 or 5 foes), re-roll the leftover numbers.
+- Choices (target, which Treasure) are made before dice are rolled.
+
+**Power Rolls**
+- Roll one die for each card in your spell with the **glyph of the card that is rolling**, counting Treasures that "count as a card" of that glyph. Then add extra dice and flat bonuses from Treasures and effects. Bands are 1-4, 5-9, 10+.
+- A card that copies another uses its own glyph for the dice, and the copied card's type for "Delivery/Quality" Treasure bonuses.
+- Lady Luck's Panties add 2 to any roll of a single die, including a Power Roll of one die. Cheater's Handbook rerolls one die; Lady Luck's Brassiere rerolls the whole roll afterwards.
+- Fool's Gold and Amulet of Maneg are checked against the final dice after all rerolls.
+
+**Spells and turn order**
+- Wild Magic (and a Proton Gem) fills any one slot. It is replaced at the wizard's turn, before anything resolves; if the deck has no card of that type, the slot is simply empty.
+- Cards that come into a spell during a turn resolve next, in order Source, then Quality, then Delivery, whichever is lowest unresolved.
+- Impatient (Quality) moves your spell to the front of the order. Its 1 damage to each foe still happens when the card resolves.
+- Order is re-checked before every turn, so effects that change component counts change the order.
+- Methy-Ion's Backpack: +10 Initiative. At the start of the round its holder may discard it to act last.
+- A wizard who dies mid-spell stops casting; the rest of their spell is discarded.
+
+**Decks and rounds**
+- A deck that runs out is reshuffled from its discard pile. If both are empty, nothing is drawn.
+- Treasure and Dead Wizard cards are reshuffled the same way.
+- Each round every living wizard draws back up to 8 cards (9 with the Thinking Cap). Dead wizards draw one Dead Wizard card each round.
+- Backlash from Beyond happens the moment it is drawn: 2 damage to a foe of the drawer's choice, then it is discarded.
+- Wild Furicorn Meadow: at the end of the game, a Wild Magic card is taken out of the Main Deck (or discard) and goes into that wizard's first hand next game.
+- A game that lasts 300 rounds without a winner is a draw. No token is given.
+
+**Known gaps**
+- If one effect would defeat two wizards at the same moment (for example Walker Time Ranger's with tied low rolls), damage is applied one wizard at a time and the game ends as soon as one is left. A true simultaneous kill, where the casting wizard still earns the token, is not modelled.
+- Pact with the Devil moves the foe's Delivery into your spell only if it is still in their spell. If they have already cast it, nothing is stolen.
 
 ## Open questions (rules gaps to settle with the owner)
 
