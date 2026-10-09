@@ -1,0 +1,15 @@
+{
+  "deck": "DEAD_WIZARD",
+  "set": "expansion1",
+  "note": "Copies per card, from the owner's Card Count.txt. These are the (c)2015 cards. They use the Blood mechanic, which is not in the base rules.",
+  "cards": [
+    { "name": "Ex Exsanguination", "copies": 3, "scan": "IMG_20261008_0001.png" },
+    { "name": "Pet from Beyond",   "copies": 3, "scan": "IMG_20261008_0002.png" },
+    { "name": "Grave Terrain",     "copies": 2, "scan": "IMG_20261008_0005.png" },
+    { "name": "Hounds from Hell",  "copies": 4, "scan": "IMG_20261008_0006.png" },
+    { "name": "Zap-o-Rama",        "copies": 3, "scan": "IMG_20261008_0007.png" },
+    { "name": "Classy in Repose",  "copies": 4, "scan": "IMG_20261008_0011.png" },
+    { "name": "Lingering Curse",   "copies": 3, "scan": "IMG_20261008_0012.png" },
+    { "name": "Just Rewards",      "copies": 3, "scan": "IMG_20261008_0016.png" }
+  ]
+}

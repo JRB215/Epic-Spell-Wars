@@ -1,0 +1,15 @@
+{
+  "deck": "DEAD_WIZARD",
+  "set": "base",
+  "note": "Copies per card, from the owner's Card Count.txt. These are the (c)2012 cards. Total 25, matching the box.",
+  "cards": [
+    { "name": "Nectar of Nirvana",                  "copies": 2, "scan": "IMG_20261008_0003.png" },
+    { "name": "Slag Shangri-La",                    "copies": 3, "scan": "IMG_20261008_0004.png" },
+    { "name": "Afterlife Artifact",                 "copies": 5, "scan": "IMG_20261008_0008.png" },
+    { "name": "The Giant Space Kingdom in the Sky", "copies": 4, "scan": "IMG_20261008_0009.png" },
+    { "name": "Pixie Paradise",                     "copies": 3, "scan": "IMG_20261008_0010.png" },
+    { "name": "Wild Furicorn Meadow",               "copies": 3, "scan": "IMG_20261008_0013.png" },
+    { "name": "Backlash from Beyond",               "copies": 2, "scan": "IMG_20261008_0014.png" },
+    { "name": "The Big House",                      "copies": 3, "scan": "IMG_20261008_0015.png" }
+  ]
+}
