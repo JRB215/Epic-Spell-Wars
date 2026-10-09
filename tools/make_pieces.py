@@ -17,7 +17,7 @@ OUT = os.path.join(REPO, "Base", "cards-upright", "Pieces")
 
 # short name -> (source file relative to the repo, longest side in pixels, clockwise turn in degrees, clean scanner halo)
 PIECES = {
-    "lws": ("Base/Last Wizard Standing token.png", 256, 0, True),
+    "lws": ("Base/Last Wizard Standing token.png", 256, 90, True),  # scanned on its side
     "skull": ("Base/skull token.png", 192, 90, True),      # scanned on its side
     "marker": ("Base/marker.png", 192, 90, True),          # the blood drop: scanned with its point to the right
     "tower1": ("Base/Tower 1.png", 1000, 180, False),      # scanned upside down
