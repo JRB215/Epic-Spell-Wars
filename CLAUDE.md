@@ -58,6 +58,16 @@ Give this file to Claude Code at the start of the new project (or put it in the 
 - Bot: random legal spells are fine (the game is chaotic anyway).
 - Dice: roll on the server, show the result with a short animation to everyone.
 
+## Settled facts about the owner's cards
+
+- Folders: `Base/` holds the base game. `Expansion 1/` holds the (c)2015 expansion. Raw scans and PDFs are never committed (see `.gitignore`).
+- Source, Quality and Delivery: 20 different cards each, 2 copies of each (40 per deck). Wild Magic: 1 design, 8 copies.
+- Treasures: 25 different cards, 1 copy each (matches the box).
+- Dead Wizards: the owner's pile was a mix. The (c)2012 cards are base (25 cards, counts in `Base/cards/dead-wizard-counts.json`). The (c)2015 cards use a Blood mechanic and live in `Expansion 1/`. The engine loads only the base set.
+- Heroes: all 16 hero sheets are treated as base game. Heroes play identically (20 HP, max 25), so only art and name differ.
+- A "game" means one round (one winner earns a token); a "match" is first to 2 tokens.
+- `tools/orient_scans.py` turns scans upright into `Base/cards-upright/`. Run it with `python tools/orient_scans.py`.
+
 ## How the owner likes to work
 
 - **Batch changes. Don't publish a new build after each request.** Collect several items and only merge and publish when the owner says "build it". Keep work on a branch with a draft PR in the meantime.
