@@ -206,17 +206,17 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.RoundStarted -> 900
         is GameEvent.HandsDealt -> 0
         is GameEvent.SpellsLocked -> 1400
-        is GameEvent.TurnStarted -> 900
-        is GameEvent.SpellRevealed -> 2400
-        is GameEvent.WildMagicResolved -> 1500
-        is GameEvent.CardResolving -> 1700
-        is GameEvent.DiceRolled -> 1900
-        is GameEvent.RollOutcome -> 2000
-        is GameEvent.DamageDealt -> 1100
-        is GameEvent.Healed -> 900
-        is GameEvent.TreasureGained -> 1100
-        is GameEvent.TreasureLost -> 800
-        is GameEvent.CardAddedToSpell -> 1000
+        is GameEvent.TurnStarted -> 1100
+        is GameEvent.SpellRevealed -> 2800
+        is GameEvent.WildMagicResolved -> 1900
+        is GameEvent.CardResolving -> 2600
+        is GameEvent.DiceRolled -> 2400
+        is GameEvent.RollOutcome -> 2900
+        is GameEvent.DamageDealt -> 1700
+        is GameEvent.Healed -> 1500
+        is GameEvent.TreasureGained -> 2900
+        is GameEvent.TreasureLost -> 1300
+        is GameEvent.CardAddedToSpell -> 1600
         is GameEvent.PlayerDied -> 2200
         is GameEvent.DeadWizardDrawn -> 1200
         is GameEvent.GameWon -> 3500

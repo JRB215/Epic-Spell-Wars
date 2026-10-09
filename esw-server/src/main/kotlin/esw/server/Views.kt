@@ -172,7 +172,7 @@ fun eventView(e: GameEvent, names: List<String>): JsonObject {
         is GameEvent.RollOutcome -> { base["player"] = e.player; base["card"] = e.card; base["total"] = e.total; base["band"] = e.band }
         is GameEvent.DamageDealt -> { base["target"] = e.target; base["amount"] = e.amount; base["source"] = e.source }
         is GameEvent.Healed -> { base["player"] = e.player; base["amount"] = e.amount }
-        is GameEvent.TreasureGained -> { base["player"] = e.player; base["treasure"] = e.treasure }
+        is GameEvent.TreasureGained -> { base["player"] = e.player; base["treasure"] = e.treasure; base["from"] = e.from }
         is GameEvent.PlayerDied -> base["player"] = e.player
         is GameEvent.GameWon -> { base["winner"] = e.winner; base["tokens"] = e.tokens }
         is GameEvent.MatchWon -> base["winner"] = e.winner

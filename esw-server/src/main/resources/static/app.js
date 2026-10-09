@@ -238,6 +238,60 @@ const face = (n) => `<div class="face f${n}">${PIPS[n].map(([r, c]) => `<i style
 const cubeHtml = () => `<div class="cube rolling" style="animation-duration:${0.45 + Math.random() * 0.25}s">${[1, 2, 3, 4, 5, 6].map(face).join('')}</div>`;
 const FACE_TURN = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(-90deg)', 4: 'rotateY(90deg)', 2: 'rotateX(-90deg)', 5: 'rotateX(90deg)' };
 
+/**
+ * A newly gained Treasure pops up large in the middle of the table so everyone can read it, holds, then flies to its
+ * owner's profile. A stolen Treasure starts from the profile it was taken from.
+ */
+function flyTreasure(e) {
+  const owner = game && game.players[e.player];
+  if (!owner) return;
+  const card = owner.treasures.find((t) => t.name === e.treasure) || Object.values(cardCache).find((c) => c.name === e.treasure);
+  const target = seatEl(e.player);
+  if (!card || !target) { floatText(e.player, `+ ${e.treasure}`, 'gain'); return; }
+  // Keep the chip off the profile until the card lands there.
+  if (card.uid != null) { flyingUids.add(card.uid); render(); }
+  const stage = $('#stage');
+  const sr = stage ? stage.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth, height: innerHeight };
+  const centre = { x: sr.left + sr.width / 2, y: sr.top + sr.height * 0.45 };
+  const centreOf = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  const fromEl = e.from != null ? seatEl(e.from) : null;
+  const start = fromEl ? centreOf(fromEl) : centre;
+
+  const el = document.createElement('div');
+  el.className = 'flycard';
+  el.innerHTML = `${cardHtml(card, '', 500)}<div class="flycap">${esc(owner.name)} ${e.from != null ? 'steals' : 'gains'} ${esc(card.name)}</div>`;
+  el.style.left = start.x + 'px';
+  el.style.top = start.y + 'px';
+  el.style.transform = 'translate(-50%, -50%) scale(.25)';
+  el.style.opacity = '0';
+  document.body.appendChild(el);
+  sound.card();
+
+  const set = (x, y, scale, opacity, ms) => {
+    el.style.transition = `left ${ms}ms cubic-bezier(.3,.7,.3,1), top ${ms}ms cubic-bezier(.3,.7,.3,1), transform ${ms}ms cubic-bezier(.3,.7,.3,1), opacity ${Math.min(ms, 500)}ms`;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    el.style.opacity = String(opacity);
+  };
+  // 1) pop up in the middle, 2) hold so it can be read, 3) fly to the owner's profile and shrink away.
+  void el.offsetWidth; // make the browser notice the starting position before it moves
+  setTimeout(() => set(centre.x, centre.y, 1, 1, 650), 30);
+  setTimeout(() => {
+    const t = seatEl(e.player) || target;
+    const to = centreOf(t);
+    el.classList.add('flying');
+    set(to.x, to.y, 0.22, 0.15, 800);
+  }, 650 + 1250);
+  setTimeout(() => {
+    el.remove();
+    flyingUids.delete(card.uid);
+    render();
+    const t = seatEl(e.player);
+    if (t) { t.classList.add('gotit'); setTimeout(() => t.classList.remove('gotit'), 700); }
+  }, 650 + 1250 + 820);
+}
+
 /** Puts the dice strip just under the spell cards, centred beneath them (or low in the middle if no spell is showing). */
 function placeDice(box) {
   const cards = $('#fcards');
@@ -270,7 +324,7 @@ function showDice(e) {
     if (t) t.textContent = e.dice.length > 1 || e.total !== sum ? `Total ${e.total}` : '';
   }, 950);
   clearTimeout(showDice.timer);
-  showDice.timer = setTimeout(() => box.classList.add('hidden'), 2500);
+  showDice.timer = setTimeout(() => box.classList.add('hidden'), 3000);
 }
 
 /** Runs after the table is drawn: banners, floating numbers, sounds and dice. */
@@ -280,7 +334,7 @@ function postEvent(e) {
     case 'roundStarted': banner(e.text, false, 1200); sound.round(); break;
     case 'gameStarted': banner(e.text, true, 1400); break;
     case 'spellsLocked': banner('All spells are locked in!', false, 1200); break;
-    case 'turnStarted': banner(`${nameOf(e.player)}'s turn`, false, 900); break;
+    case 'turnStarted': banner(`${nameOf(e.player)}'s turn`, false, 1100); break;
     case 'spellRevealed': sound.reveal(); break;
     case 'cardResolving': sound.card(); break;
     case 'dice': showDice(e); break;
@@ -290,7 +344,7 @@ function postEvent(e) {
       if (Date.now() - lastHitSound > 350) { sound.hit(); lastHitSound = Date.now(); }
       break;
     case 'heal': floatText(e.player, `+${e.amount}`, 'heal'); if (e.player === mine) flash('heal'); sound.heal(); break;
-    case 'treasureGained': floatText(e.player, `+ ${e.treasure}`, 'gain'); break;
+    case 'treasureGained': flyTreasure(e); break;
     case 'died': banner(`${nameOf(e.player)} is dead!`, true, 2100); sound.death(); break;
     case 'gameWon': banner(e.text, true, 3200); sound.win(); break;
     case 'matchWon': winnerName = nameOf(e.winner); sound.win(); render(); break;
@@ -505,9 +559,11 @@ function lwsHtml(n) {
     : '<span class="tk"></span>')).join('')}</span>`;
 }
 
+const flyingUids = new Set(); // treasures that are still flying to their owner
+
 function chipsHtml(p) {
   const die = p.bonusDie ? `<span class="chip die" title="Slag Shangri-La: this die is added to every Power Roll on ${esc(p.name)}'s first turn, then removed.">Slag die +${p.bonusDie} (first turn)</span>` : '';
-  return die + p.treasures.map((t) => { cardCache[t.id] = t; return `<span class="chip" data-cid="${esc(t.id)}">${esc(t.name)}</span>`; }).join('')
+  return die + p.treasures.filter((t) => !flyingUids.has(t.uid)).map((t) => { cardCache[t.id] = t; return `<span class="chip" data-cid="${esc(t.id)}">${esc(t.name)}</span>`; }).join('')
     + (p.deadCards ? `<span class="chip dead">${p.deadCards} dead wizard card${p.deadCards > 1 ? 's' : ''}</span>` : '');
 }
 

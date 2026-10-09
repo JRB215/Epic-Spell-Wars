@@ -222,6 +222,14 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .feed div.k-cardResolving.new, .feed div.k-rollOutcome.new { color: var(--gold); }
 .feed div.k-rollOutcome { color: #ffe9a3; }
 
+/* A treasure being awarded: big in the middle, then flying to its owner's profile. */
+.flycard { position: fixed; z-index: 66; width: min(15vw, 26vh); pointer-events: none; will-change: transform, left, top; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .9)) drop-shadow(0 0 26px rgba(245, 197, 24, .75)); }
+.flycard .card { width: 100%; }
+.flycard .flycap { margin-top: 10px; text-align: center; font-family: Impact, sans-serif; letter-spacing: .04em; font-size: 1.25rem; color: var(--gold); text-shadow: 2px 2px 0 #000; white-space: nowrap; position: absolute; left: 50%; transform: translateX(-50%); }
+.flycard.flying .flycap { opacity: 0; transition: opacity .2s; }
+.fseat.gotit, .mine.gotit { animation: gotit .7s; }
+@keyframes gotit { 0% { box-shadow: 0 0 0 0 rgba(245, 197, 24, .9); } 50% { box-shadow: 0 0 26px 8px rgba(245, 197, 24, .9); } 100% { box-shadow: 0 0 0 0 rgba(245, 197, 24, 0); } }
+
 /* ---------- overlays ---------- */
 #banner { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 50; background: rgba(0, 0, 0, .82); border: 3px solid var(--gold); border-radius: 12px; padding: 10px 26px; font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.6rem; color: var(--gold); pointer-events: none; animation: popin .25s; text-align: center; max-width: 90vw; }
 #banner.big { top: 38%; font-size: 3rem; padding: 18px 44px; }
