@@ -24,7 +24,11 @@ internal object CardEffects {
     private fun rolled(id: String, kind: Target, body: suspend EffectContext.(band: Int, targets: List<PlayerState>) -> Unit) =
         def(id) {
             val targets = targets(kind)
-            body(band(powerRoll()), targets)
+            val total = powerRoll()
+            val band = band(total)
+            // Tell the screens which result of the table applies, so they can show just that one.
+            g.emit(GameEvent.RollOutcome(caster.id, g.catalog.allDefs.getValue(id).name, total, band))
+            body(band, targets)
         }
 
     /** A Power Roll card that just deals fixed damage per band to its targets. */

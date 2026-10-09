@@ -117,6 +117,8 @@ fun describe(e: GameEvent, names: List<String>): String = when (e) {
     is GameEvent.CardResolving -> "${name(names, e.player)} resolves ${e.card}."
     is GameEvent.DiceRolled -> "${name(names, e.player)} rolls ${e.dice.joinToString(" + ")}" +
         (if (e.dice.sum() != e.total) " = ${e.total}" else if (e.dice.size > 1) " = ${e.total}" else "") + " (${e.reason})."
+    is GameEvent.RollOutcome ->
+        "${name(names, e.player)}'s ${e.card} roll of ${e.total} falls in ${listOf("1-4", "5-9", "10+")[e.band - 1]}."
     is GameEvent.DamageDealt -> "${name(names, e.target)} takes ${e.amount} damage (${e.hpAfter} HP left)."
     is GameEvent.Healed -> "${name(names, e.player)} heals ${e.amount} (${e.hpAfter} HP)."
     is GameEvent.TreasureGained -> "${name(names, e.player)} gains ${e.treasure}" +
@@ -142,6 +144,7 @@ private fun kind(e: GameEvent) = when (e) {
     is GameEvent.WildMagicResolved -> "wildMagic"
     is GameEvent.CardResolving -> "cardResolving"
     is GameEvent.DiceRolled -> "dice"
+    is GameEvent.RollOutcome -> "rollOutcome"
     is GameEvent.DamageDealt -> "damage"
     is GameEvent.Healed -> "heal"
     is GameEvent.TreasureGained -> "treasureGained"
@@ -164,6 +167,7 @@ fun eventView(e: GameEvent, names: List<String>): JsonObject {
         is GameEvent.DiceRolled -> {
             base["player"] = e.player; base["dice"] = e.dice; base["total"] = e.total; base["reason"] = e.reason
         }
+        is GameEvent.RollOutcome -> { base["player"] = e.player; base["card"] = e.card; base["total"] = e.total; base["band"] = e.band }
         is GameEvent.DamageDealt -> { base["target"] = e.target; base["amount"] = e.amount; base["source"] = e.source }
         is GameEvent.Healed -> { base["player"] = e.player; base["amount"] = e.amount }
         is GameEvent.TreasureGained -> { base["player"] = e.player; base["treasure"] = e.treasure }

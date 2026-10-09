@@ -13,6 +13,8 @@ sealed interface GameEvent {
     data class WildMagicResolved(val player: Int, val slot: String, val replacement: String?) : GameEvent
     data class CardResolving(val player: Int, val card: String) : GameEvent
     data class DiceRolled(val player: Int, val reason: String, val dice: List<Int>, val total: Int) : GameEvent
+    /** A Power Roll came to [total], which falls in result [band]: 1 is 1-4, 2 is 5-9, 3 is 10 or more. */
+    data class RollOutcome(val player: Int, val card: String, val total: Int, val band: Int) : GameEvent
     data class DamageDealt(val target: Int, val amount: Int, val source: Int?, val hpAfter: Int) : GameEvent
     data class Healed(val player: Int, val amount: Int, val hpAfter: Int) : GameEvent
     data class TreasureGained(val player: Int, val treasure: String, val from: Int?) : GameEvent

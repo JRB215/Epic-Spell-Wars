@@ -74,6 +74,21 @@ class RulesTest {
     }
 
     @Test
+    fun eachPowerRollReportsWhichResultAppliesRightAfterTheDice() {
+        // A 3 is the lowest band, a 6 the middle one.
+        for ((die, band) in listOf(3 to 1, 6 to 2)) {
+            events.clear()
+            val game = setup(mapOf(0 to listOf("mercy-killing"), 1 to listOf("pam-and-hecubas")), dice = listOf(die))
+            round(game)
+            val roll = events.indexOfFirst { it is GameEvent.DiceRolled && it.reason == "Power Roll" }
+            val outcome = events[roll + 1] as GameEvent.RollOutcome
+            assertEquals(band, outcome.band)
+            assertEquals(die, outcome.total)
+            assertEquals("Mercy-Killing", outcome.card)
+        }
+    }
+
+    @Test
     fun bigBookOfAwesomenessAddsTwoToPowerRolls() {
         // A roll of 3 would be 2 damage; with +2 it is 5, which is the middle band (3 damage).
         val game = setup(

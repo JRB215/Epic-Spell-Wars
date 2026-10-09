@@ -151,18 +151,31 @@ function nameOf(pid) { return game && game.players[pid] ? game.players[pid].name
 
 const NOT_NARRATED = new Set(['roundStarted', 'gameStarted', 'matchStarted', 'spellsLocked', 'handsDealt', 'gameWon', 'matchWon']);
 
-function cardTextFor(e) {
+/** The printed text of a card in somebody's spell (or any card seen so far), found by its name. */
+function cardNamed(e) {
   const p = game && game.players[e.player];
   const sc = p && p.spell ? p.spell.cards.find((c) => c.card && c.card.name === e.card) : null;
-  const text = sc ? sc.card.text : '';
-  return text.length > 170 ? text.slice(0, 167) + '...' : text;
+  if (sc) return sc.card;
+  return Object.values(cardCache).find((c) => c.name === e.card) || null;
 }
 
 function narration(e) {
   switch (e.k) {
     case 'turnStarted': return `${nameOf(e.player)} begins to cast...`;
     case 'spellRevealed': return `${nameOf(e.player)} reveals ${e.cards.join(' + ') || 'nothing'}`;
-    case 'cardResolving': return `${e.card}: ${cardTextFor(e)}`;
+    case 'cardResolving': {
+      const c = cardNamed(e);
+      const parsed = c ? parseCardText(c.text) : null;
+      // A card with a roll table only says who it aims at for now; the result comes after the dice.
+      if (parsed && parsed.bands.length) return `${e.card}: aimed at ${parsed.target}. Rolling the dice...`;
+      return `${e.card}: ${c ? c.text : ''}`;
+    }
+    case 'rollOutcome': {
+      const c = cardNamed(e);
+      const parsed = c ? parseCardText(c.text) : null;
+      const band = parsed ? parsed.bands[e.band - 1] : null;
+      return band ? `Roll of ${e.total} (${band.range}): ${band.text}` : e.text;
+    }
     default: return e.text;
   }
 }
@@ -539,7 +552,7 @@ function focusHtml() {
   return `<div class="focus"><div class="fhead"><img src="${esc(p.hero.art)}?w=120" alt="" onerror="this.style.visibility='hidden'">
       <span>${esc(p.name)} casts!</span>${ini ? `<small>Initiative ${ini.initiative}</small>` : ''}</div>
     <div class="fbody"><div class="fcards" id="fcards">${cards.map((sc) => fcHtml(sc, flipped)).join('') || '<span class="muted">No cards played.</span>'}</div>
-    <div class="feed">${feed.slice(-6).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div></div>`;
+    <div class="feed">${feed.slice(-4).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div></div>`;
 }
 
 function stageHtml() {

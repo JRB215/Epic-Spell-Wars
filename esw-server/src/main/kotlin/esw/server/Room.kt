@@ -211,6 +211,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.WildMagicResolved -> 1500
         is GameEvent.CardResolving -> 1700
         is GameEvent.DiceRolled -> 1900
+        is GameEvent.RollOutcome -> 2000
         is GameEvent.DamageDealt -> 1100
         is GameEvent.Healed -> 900
         is GameEvent.TreasureGained -> 1100

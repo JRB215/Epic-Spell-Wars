@@ -194,7 +194,8 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .feed div.k-damage { color: #ff7a6e; } .feed div.k-heal { color: #8dff7a; } .feed div.k-dice { color: var(--gold); }
 .feed div.k-cardResolving { color: #fff; }
 .feed div.k-damage.new, .feed div.k-heal.new, .feed div.k-dice.new { color: inherit; }
-.feed div.k-cardResolving.new { color: var(--gold); }
+.feed div.k-cardResolving.new, .feed div.k-rollOutcome.new { color: var(--gold); }
+.feed div.k-rollOutcome { color: #ffe9a3; }
 
 /* ---------- overlays ---------- */
 #banner { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 50; background: rgba(0, 0, 0, .82); border: 3px solid var(--gold); border-radius: 12px; padding: 10px 26px; font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.6rem; color: var(--gold); pointer-events: none; animation: popin .25s; text-align: center; max-width: 90vw; }
