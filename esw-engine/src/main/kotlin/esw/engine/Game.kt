@@ -329,9 +329,18 @@ class Game(
     private suspend fun resolveSpell(p: PlayerState) {
         val spell = p.spell!!
         while (p.alive) {
-            val next = spell.cards.filter { !it.resolved }
-                .minWithOrNull(compareBy({ it.slot.ordinal }, { spell.cards.indexOf(it) }))
-                ?: break
+            val waiting = spell.cards.filter { !it.resolved }
+            val slot = waiting.minOfOrNull { it.slot.ordinal } ?: break
+            val sameType = waiting.filter { it.slot.ordinal == slot }
+            // Several unresolved cards of one type (added by an effect): the owner picks the order.
+            val next = if (sameType.size == 1) {
+                sameType.first()
+            } else {
+                val names = sameType.map { it.card.def.name }
+                val pick = decisions.chooseOption(p.id, "Resolve which ${sameType.first().slot.name.lowercase()} first?", names)
+                require(pick in names.indices) { "Invalid option $pick" }
+                sameType[pick]
+            }
             next.resolved = true
             emit(GameEvent.CardResolving(p.id, next.card.def.name))
             if (next.card.def.glyph == Glyph.DARK) {
@@ -652,6 +661,8 @@ class Game(
         p.treasures.add(card)
         return card
     }
+
+    internal suspend fun resolveSpellForTest(p: PlayerState) = resolveSpell(p)
 
     internal suspend fun playRoundForTest(): RoundOutcome {
         roundNumber++

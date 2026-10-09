@@ -165,6 +165,41 @@ class RulesTest {
     }
 
     @Test
+    fun theOwnerChoosesTheOrderOfTwoCardsOfTheSameType() {
+        // Wizard 1 plays Bleemax Brainiac's, which can add a Quality; here the second Quality is added by hand,
+        // so two Qualities wait in the spell and the owner is asked which goes first.
+        val asked = mutableListOf<Pair<String, List<String>>>()
+        val chooser = object : Decisions by ScriptedDecisions(mapOf(0 to listOf("king-oberons"), 1 to listOf("pam-and-hecubas"))) {
+            override suspend fun chooseOption(player: Int, prompt: String, options: List<String>): Int {
+                asked.add(prompt to options)
+                return options.indexOf("Mysterious") // always resolve Mysterious first
+            }
+        }
+        val game = Game(catalog, listOf("Wizard 1", "Wizard 2"), chooser, ScriptedDice(emptyList()), Random(3)) { events.add(it) }
+        runBlocking { game.beginGameForTest() }
+        val p = game.players[0]
+        game.giveToHand(p, "king-oberons")
+        game.giveToHand(game.players[1], "pam-and-hecubas")
+        val gem = game.giveToHand(p, "mysterious")
+        val mighty = game.giveToHand(p, "mighty-gro")
+        // Put both Qualities straight into the spell, plus the Source from the hand.
+        runBlocking {
+            val source = p.hand.first { it.def.id == "king-oberons" }
+            val spell = esw.engine.Spell().also { it.cards.add(SpellCard(source, esw.model.CardType.SOURCE, false)) }
+            p.hand.removeAll(listOf(source, gem, mighty))
+            spell.cards.add(SpellCard(gem, esw.model.CardType.QUALITY, false))
+            spell.cards.add(SpellCard(mighty, esw.model.CardType.QUALITY, false))
+            p.spell = spell
+            game.resolveSpellForTest(p)
+        }
+        assertEquals(1, asked.size)
+        assertEquals("Resolve which quality first?", asked[0].first)
+        assertEquals(setOf("Mysterious", "Mighty-Gro"), asked[0].second.toSet())
+        val resolved = events.filterIsInstance<GameEvent.CardResolving>().map { it.card }
+        assertEquals(listOf("King Oberon's", "Mysterious", "Mighty-Gro"), resolved)
+    }
+
+    @Test
     fun slagShangriLaDieIsRolledAtGameStartAndAddedOnlyOnTheFirstTurn() {
         // Dice in order: the bonus die (4), then Mercy-Killing's single Power Roll die (3).
         val game = Game(

@@ -118,7 +118,7 @@ The rulebook and cards leave these open. The engine picks the simplest reading. 
 
 **Spells and turn order**
 - Wild Magic (and a Proton Gem) fills any one slot. It is replaced at the wizard's turn, before anything resolves; if the deck has no card of that type, the slot is simply empty.
-- Cards that come into a spell during a turn resolve next, in order Source, then Quality, then Delivery, whichever is lowest unresolved.
+- Cards that come into a spell during a turn resolve next, in order Source, then Quality, then Delivery, whichever is lowest unresolved. If two or more unresolved cards are of the same type, the caster is asked "Resolve which first?" (the rulebook says the owner chooses; its example resolves Mind-Altering before Mysterious so the Treasure it gives counts). Bots choose at random.
 - Impatient (Quality) moves your spell to the front of the order. Its 1 damage to each foe still happens when the card resolves.
 - Order is re-checked before every turn, so effects that change component counts change the order.
 - Methy-Ion's Backpack: +10 Initiative. At the start of the round its holder may discard it to act last.
