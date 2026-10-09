@@ -13,7 +13,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write   # lets the last step create a GitHub release for a version tag
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -46,3 +46,16 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      # A version tag also becomes a GitHub release. The notes come from docs/release-notes/<tag>.md when that file
+      # exists, otherwise GitHub writes them from the commits since the last release.
+      - name: Create the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Epic Spell Wars online $GITHUB_REF_NAME" --notes-file "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Epic Spell Wars online $GITHUB_REF_NAME" --generate-notes
+          fi
