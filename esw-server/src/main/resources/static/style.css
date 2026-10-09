@@ -159,6 +159,12 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .card.g-ARCANE .gl { background: var(--arcane); } .card.g-DARK .gl { background: #000; } .card.g-ELEMENTAL .gl { background: var(--elemental); }
 .card.g-ILLUSION .gl { background: var(--illusion); } .card.g-PRIMAL .gl { background: var(--primal); }
 .card.picked { opacity: .3; filter: grayscale(.6); }
+/* The glyph marker: a round icon on the bottom-left corner of the card. It sits over the small printed glyph, so it
+   stays in the part of a card that remains visible when cards overlap in a hand. */
+.card .gbadge { position: absolute; left: 2.5cqw; bottom: 3cqw; width: 19cqw; height: 19cqw; border-radius: 50%; z-index: 4; border: 1px solid #000; box-shadow: 0 1px 4px rgba(0, 0, 0, .75); overflow: hidden; background: #888; }
+.card .gbadge img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.card .gbadge.gb-ARCANE { background: var(--arcane); } .card .gbadge.gb-DARK { background: #fff; } .card .gbadge.gb-ELEMENTAL { background: #b3253a; }
+.card .gbadge.gb-ILLUSION { background: var(--illusion); } .card .gbadge.gb-PRIMAL { background: var(--primal); }
 
 /* ---------- my hand, along the bottom ---------- */
 .mine { position: relative; flex: 0 0 auto; width: min(23vw, 36vh); background: var(--panel); border: 2px solid var(--gold); border-radius: 10px; padding: 6px; }

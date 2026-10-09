@@ -20,7 +20,7 @@ Then open `http://<the PC's address>:8081` in a browser. Seven Wonders keeps its
 The Docker image does not contain any card pictures. They are read from the mounted folder (`C:\EpicSpellWars\assets`):
 
 1. On the development PC, run `python tools\orient_scans.py`. It turns the raw scans upright into `Base\cards-upright`.
-2. Run `python tools\make_pieces.py`. It prepares the Last Wizard Standing token, the skull counter, the blood marker and the towers (turned the right way up and cleaned) into `Base\cards-upright\Pieces`.
+2. Run `python tools\make_pieces.py`. It prepares the Last Wizard Standing token, the skull counter, the blood marker, the towers (turned the right way up and cleaned) and the five glyph icons shown on the cards (cut from the rulebook page) into `Base\cards-upright\Pieces`.
 3. Copy everything inside `Base\cards-upright` (the folders `Source`, `Quality`, `Delivery`, `Treasures`, `Graveyards`, `Character Sheets`, `Card Back and Wild Card`, `Pieces`) into `C:\EpicSpellWars\assets`.
 4. That is all. Pictures can be swapped later without updating the server. A card with no picture is drawn as a plain text card.
 

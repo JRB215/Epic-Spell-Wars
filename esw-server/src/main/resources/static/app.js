@@ -399,10 +399,15 @@ function cardHtml(c, extra = '', width = 300) {
   const noart = !c.art;
   const img = c.art ? `<img src="${esc(c.art)}?w=${width}" alt="" onerror="this.parentNode.classList.add('noart');this.remove()">` : '';
   const ini = c.initiative != null ? `<div class="ini">${c.initiative}</div>` : '';
+  // A clear round glyph marker on the bottom-left of the card (also for Treasures that count as a glyph).
+  const glyphName = c.glyph || c.countsAsGlyph;
+  const badge = glyphName
+    ? `<div class="gbadge gb-${glyphName}" title="${esc(glyphName[0] + glyphName.slice(1).toLowerCase())} glyph"><img src="${PIECE('glyph-' + glyphName.toLowerCase())}" alt="" onerror="this.remove()"></div>`
+    : '';
   const type = { SOURCE: 'Source', QUALITY: 'Quality', DELIVERY: 'Delivery', TREASURE: 'Treasure', DEAD_WIZARD: 'Dead Wizard', WILD_MAGIC: 'Wild Magic' }[c.type] || c.type;
   const glyph = c.glyph ? ` &middot; ${c.glyph[0] + c.glyph.slice(1).toLowerCase()}` : '';
   return `<div class="card t-${c.type} g-${c.glyph || 'NONE'} ${noart ? 'noart' : ''} ${extra}" data-cid="${esc(c.id)}" data-uid="${c.uid ?? ''}">
-    ${img}<div class="txt"><div class="nm">${esc(c.name)}</div><div class="ty">${type}${glyph}</div><div>${esc(c.text)}</div>${ini}</div><div class="gl"></div></div>`;
+    ${img}<div class="txt"><div class="nm">${esc(c.name)}</div><div class="ty">${type}${glyph}</div><div>${esc(c.text)}</div>${ini}</div><div class="gl"></div>${badge}</div>`;
 }
 
 // ---------------------------------------------------------------- hover descriptions
