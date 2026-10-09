@@ -18,7 +18,7 @@
   --delivery: #58b947;
   /* Sizes are tuned for a 1920x1080 screen and scale with the window. */
   --hand-w: min(10.5vw, 18.5vh);
-  --focus-w: min(11vw, 18vh);
+  --focus-w: min(10.5vw, 17vh);
 }
 
 * { box-sizing: border-box; }
@@ -219,7 +219,9 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .spellname .w.wait { color: #6d6082; }
 .spellname .w.done { color: var(--ink); }
 .spellname .w.now { color: var(--gold); text-shadow: 0 0 14px rgba(245, 197, 24, .95), 2px 2px 0 #000; }
-/* The card's own rules text, under the cards. */
+/* Room kept under the cards for the dice strip, so the card text below does not jump when dice appear. */
+.dicerow { width: 100%; height: 66px; flex: 0 0 auto; }
+/* The card's own rules text, under the dice. */
 .ctext { width: 100%; max-width: 900px; min-height: 2.6rem; text-align: center; font-size: 1.1rem; line-height: 1.3; color: var(--ink); background: rgba(0, 0, 0, .35); border-radius: 8px; padding: 4px 14px; }
 .ctext b { color: var(--gold); }
 .feed { flex: 1 1 0; min-width: 260px; max-width: 640px; display: flex; flex-direction: column; justify-content: center; gap: 5px; text-align: left; }
@@ -271,14 +273,14 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 #dice .who { color: var(--muted); font-size: .95rem; max-width: 200px; line-height: 1.25; }
 #dice .total { font-family: Impact, sans-serif; font-size: 2rem; color: var(--gold); min-width: 5.5rem; }
 .dice3d { display: flex; gap: 22px; justify-content: center; margin: 6px 6px; perspective: 600px; }
-.cube { width: 52px; height: 52px; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2, .9, .25, 1); }
+.cube { width: 44px; height: 44px; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2, .9, .25, 1); }
 .cube.rolling { animation: cubeSpin .55s linear infinite; }
-.face { position: absolute; inset: 0; background: #fbfbf4; border: 2px solid #111; border-radius: 10px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 6px; backface-visibility: hidden; }
+.face { position: absolute; inset: 0; background: #fbfbf4; border: 2px solid #111; border-radius: 9px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 5px; backface-visibility: hidden; }
 .face i { border-radius: 50%; background: #111; margin: 12%; }
 .face.f1 i { background: var(--red); }
-.face.f1 { transform: translateZ(26px); } .face.f6 { transform: rotateY(180deg) translateZ(26px); }
-.face.f3 { transform: rotateY(90deg) translateZ(26px); } .face.f4 { transform: rotateY(-90deg) translateZ(26px); }
-.face.f2 { transform: rotateX(90deg) translateZ(26px); } .face.f5 { transform: rotateX(-90deg) translateZ(26px); }
+.face.f1 { transform: translateZ(22px); } .face.f6 { transform: rotateY(180deg) translateZ(22px); }
+.face.f3 { transform: rotateY(90deg) translateZ(22px); } .face.f4 { transform: rotateY(-90deg) translateZ(22px); }
+.face.f2 { transform: rotateX(90deg) translateZ(22px); } .face.f5 { transform: rotateX(-90deg) translateZ(22px); }
 #spotlight { position: fixed; inset: 0; z-index: 55; background: rgba(8, 4, 14, .8); display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; pointer-events: none; animation: fadein .25s; }
 #tip { position: fixed; z-index: 90; width: 360px; background: #1c1428; border: 3px solid var(--gold); border-radius: 12px; padding: 12px 14px 10px; box-shadow: 0 10px 32px rgba(0, 0, 0, .8); pointer-events: none; font-size: 1rem; line-height: 1.35; }
 #tip .tt-head { border-bottom: 3px solid; padding-bottom: 6px; margin-bottom: 8px; }

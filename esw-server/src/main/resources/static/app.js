@@ -312,9 +312,9 @@ function placeDice(box) {
   const cards = $('#fcards');
   if (cards) {
     const r = cards.getBoundingClientRect();
-    // Under the cards and under the line of card text that sits there.
-    const text = $('#ctext');
-    box.style.top = (text ? text.getBoundingClientRect().bottom + 2 : r.bottom - 14) + 'px';
+    // In the row reserved just under the cards; the card text comes after it.
+    const row = $('#dicerow');
+    box.style.top = (row ? row.getBoundingClientRect().top + 1 : r.bottom - 14) + 'px';
     box.style.left = (r.left + r.width / 2) + 'px';
   } else {
     box.style.top = '38%';
@@ -679,6 +679,7 @@ function focusHtml() {
     ${spellNameHtml(p, flipped ? cards : [])}
     <div class="fbody"><div class="fcards" id="fcards">${cards.map((sc) => fcHtml(sc, flipped)).join('') || '<span class="muted">No cards played.</span>'}</div>
     <div class="feed">${feed.slice(-4).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div>
+    <div class="dicerow" id="dicerow"></div>
     ${ctextHtml()}</div>`;
 }
 
