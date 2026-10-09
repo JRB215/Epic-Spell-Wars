@@ -71,6 +71,15 @@ Give this file to Claude Code at the start of the new project (or put it in the 
 - `docs/RULES.md` lists every rule interpretation the engine makes. Keep it in step with the code.
 - `tools/orient_scans.py` turns scans upright into `Base/cards-upright/`. Run it with `python tools/orient_scans.py`.
 
+## Status and workflow notes
+
+- Done and tested: card data, rules engine (300 random matches pass the card audit), server, browser screens, Docker image definition, CI workflows.
+- Not yet seen with real people: two or more humans at one table, the "bot takes over for a dropped player" vote, sounds (only the code was checked), and the Docker image (CI builds it; this PC has no Docker).
+- Owner said (2026-10-08): base-level work can be built and published without pausing for approval each time. Pause publishing only while the owner is giving active feedback after testing.
+- Work goes on a branch and is merged to `main` through a pull request; pushing to `main` publishes the `:latest` image. `gh` is not installed here, so the owner opens and merges pull requests in the GitHub page.
+- Local server for testing: `$env:ESW_ASSETS='C:\Dev\Epic-spell-wars\Base\cards-upright'; $env:PORT='8099'; .\gradlew.bat :esw-server:bootRun`. The built-in browser can open it at `http://localhost:8099`. Set `ESW_PACE` to a small number (like 0.04) to watch a whole match quickly.
+- `javascript_tool` calls time out after 45 seconds; poll long matches with short calls.
+
 ## How the owner likes to work
 
 - **Batch changes. Don't publish a new build after each request.** Collect several items and only merge and publish when the owner says "build it". Keep work on a branch with a draft PR in the meantime.

@@ -59,11 +59,11 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .seat-num { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: #1b1200; display: grid; place-items: center; font-weight: 800; }
 
 /* ---------- table ---------- */
-.table { display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto 1fr auto; height: 100vh; gap: 8px; padding: 8px; }
+.table { display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto 1fr auto; min-height: 100vh; gap: 8px; padding: 8px; }
 .table .topbar { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 4px 8px; }
 .table .topbar b { color: var(--gold); font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.2rem; }
 .table .topbar .spacer { flex: 1; }
-.table .stage { grid-column: 1; grid-row: 2; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.table .stage { grid-column: 1; grid-row: 2; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 230px; }
 .table .log { grid-column: 2; grid-row: 2 / 4; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 8px; overflow-y: auto; font-size: .82rem; line-height: 1.35; }
 .table .log div { padding: 2px 0; border-bottom: 1px dotted #3a2d4e; }
 .table .bottom { grid-column: 1; grid-row: 3; }
@@ -132,7 +132,8 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .builder .bslot.s-SOURCE { border-color: var(--source); } .builder .bslot.s-QUALITY { border-color: var(--quality); } .builder .bslot.s-DELIVERY { border-color: var(--delivery); }
 .builder .bslot.target { box-shadow: 0 0 12px 3px var(--gold); }
 .builder .bslot .card { width: 100%; height: 100%; border-width: 2px; }
-.choices { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: flex-start; }
+.prompt { max-height: 42vh; overflow-y: auto; }
 .waiting { color: var(--muted); font-style: italic; padding: 8px 4px; }
 .vote { background: #3b1620; border: 2px solid var(--red); border-radius: 10px; padding: 10px; margin-bottom: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
