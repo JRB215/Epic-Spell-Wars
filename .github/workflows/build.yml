@@ -18,12 +18,8 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and run all tests
-        run: ./gradlew build --no-daemon
-
-  docker:
-    # Makes sure the Docker image still builds. Nothing is published from here.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build the image
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+      - name: Make sure the Docker image builds (nothing is published from here)
         run: docker build -t epic-spell-wars-server:test .

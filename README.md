@@ -29,6 +29,8 @@ The same folder holds `leaderboard.json`, the match wins by player name. Only ga
 
 ## Building and testing
 
+The Docker image only wraps a finished jar: the workflows run `./gradlew build` first (which makes `esw-server/build/libs/app.jar`) and then `docker build .`.
+
 ```powershell
 .\gradlew.bat test           # all tests
 .\gradlew.bat :esw-server:bootRun   # run the server on http://localhost:8080

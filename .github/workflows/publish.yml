@@ -22,8 +22,10 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - name: Run all tests first
-        run: ./gradlew build --no-daemon
+      - name: Build the jar and run all tests first
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
