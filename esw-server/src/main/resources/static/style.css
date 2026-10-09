@@ -18,7 +18,7 @@
   --delivery: #58b947;
   /* Sizes are tuned for a 1920x1080 screen and scale with the window. */
   --hand-w: min(10.5vw, 18.5vh);
-  --focus-w: min(12vw, 21vh);
+  --focus-w: min(11vw, 18vh);
 }
 
 * { box-sizing: border-box; }
@@ -199,7 +199,7 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .fhead { display: flex; align-items: center; gap: 12px; font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.6rem; color: var(--gold); text-shadow: 2px 2px 0 #000; }
 .fhead img { width: 40px; height: 56px; object-fit: cover; border-radius: 5px; border: 2px solid #000; }
 .fhead small { font-family: "Trebuchet MS", sans-serif; letter-spacing: 0; font-size: .9rem; text-shadow: none; }
-.fcards { display: flex; gap: 24px; justify-content: center; align-items: center; padding: 24px 16px 20px; min-height: calc(var(--focus-w) * 1.4 + 44px); flex: 0 0 auto; }
+.fcards { display: flex; gap: 24px; justify-content: center; align-items: center; padding: 14px 16px 8px; min-height: calc(var(--focus-w) * 1.4 + 24px); flex: 0 0 auto; }
 .fc { position: relative; width: var(--focus-w); aspect-ratio: 5 / 7; perspective: 1100px; transition: transform .35s, filter .35s; }
 .fc-in { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.3, .7, .3, 1); }
 .fc.flipped .fc-in { transform: rotateY(180deg); }
@@ -213,6 +213,15 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .fc .badge { position: absolute; right: -8px; top: -10px; z-index: 5; width: 38px; height: 38px; border-radius: 50%; background: var(--green); color: #fff; border: 3px solid #000; display: none; place-items: center; font-weight: 900; font-size: 1.3rem; }
 .fc.done .badge { display: grid; }
 .fbody { display: flex; gap: 36px; align-items: center; justify-content: center; width: 100%; }
+/* The spell's name, above the cards; the word for the card going off is lit. */
+.spellname { font-family: Impact, "Arial Black", sans-serif; letter-spacing: .05em; font-size: 1.9rem; text-align: center; line-height: 1.15; min-height: 2.2rem; text-shadow: 2px 2px 0 #000; }
+.spellname .w { transition: color .3s, text-shadow .3s; }
+.spellname .w.wait { color: #6d6082; }
+.spellname .w.done { color: var(--ink); }
+.spellname .w.now { color: var(--gold); text-shadow: 0 0 14px rgba(245, 197, 24, .95), 2px 2px 0 #000; }
+/* The card's own rules text, under the cards. */
+.ctext { width: 100%; max-width: 900px; min-height: 2.6rem; text-align: center; font-size: 1.1rem; line-height: 1.3; color: var(--ink); background: rgba(0, 0, 0, .35); border-radius: 8px; padding: 4px 14px; }
+.ctext b { color: var(--gold); }
 .feed { flex: 1 1 0; min-width: 260px; max-width: 640px; display: flex; flex-direction: column; justify-content: center; gap: 5px; text-align: left; }
 .feed div { font-size: 1rem; color: var(--muted); opacity: .75; }
 .feed div.new { font-size: 1.45rem; color: var(--ink); opacity: 1; font-weight: 700; animation: feedin .35s; }
@@ -221,6 +230,30 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .feed div.k-damage.new, .feed div.k-heal.new, .feed div.k-dice.new { color: inherit; }
 .feed div.k-cardResolving.new, .feed div.k-rollOutcome.new { color: var(--gold); }
 .feed div.k-rollOutcome { color: #ffe9a3; }
+
+/* Cards revealed from the deck, laid out in the middle of the table. */
+#reveal { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 58; pointer-events: none; text-align: center; background: rgba(8, 4, 14, .86); border: 3px solid var(--gold); border-radius: 14px; padding: 12px 22px 16px; animation: fadein .2s; max-width: 92vw; }
+#reveal .rcap { font-family: Impact, sans-serif; letter-spacing: .04em; font-size: 1.35rem; color: var(--gold); margin-bottom: 10px; }
+#reveal .rcards { display: flex; gap: 16px; justify-content: center; }
+#reveal .rc { position: relative; width: min(9vw, 17vh); animation: dealin .45s both; }
+#reveal .rc .card { width: 100%; }
+#reveal .rc.kept .card { outline: 4px solid var(--green); box-shadow: 0 0 24px rgba(88, 185, 71, .8); }
+#reveal .rc.tossed { filter: grayscale(.7) brightness(.65); }
+#reveal .rtag { margin-top: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
+#reveal .rc.kept .rtag { color: #8dff7a; }
+@keyframes dealin { from { opacity: 0; transform: translateY(-40px) scale(.7) rotate(-6deg); } to { opacity: 1; transform: none; } }
+
+/* The deck and discard piles, in a column on the left of big screens. */
+#piles { position: fixed; left: 10px; top: 232px; width: 112px; z-index: 5; display: none; flex-direction: column; gap: 14px; }
+#piles .bigpile { text-align: center; font-size: .78rem; color: var(--muted); }
+#piles .bigpile .stack { position: relative; width: 92px; margin: 0 auto 4px; aspect-ratio: 5 / 7; border-radius: 7px; border: 2px solid #000; background: #120c19; box-shadow: 3px 3px 0 #2a2038, 6px 6px 0 #1d1628; overflow: hidden; }
+#piles .bigpile .stack img, #piles .bigpile .stack .card { width: 100%; height: 100%; object-fit: cover; display: block; border: 0; border-radius: 0; box-shadow: none; }
+#piles .bigpile b { color: var(--ink); font-size: 1rem; }
+#piles .bigpile .empty { height: 100%; display: grid; place-items: center; color: #4a3a63; font-size: .7rem; }
+@media (min-width: 1400px) {
+  #piles { display: flex; }
+  .turnbar .piles { display: none; }
+}
 
 /* A treasure being awarded: big in the middle, then flying to its owner's profile. */
 .flycard { position: fixed; z-index: 66; width: min(15vw, 26vh); pointer-events: none; will-change: transform, left, top; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, .9)) drop-shadow(0 0 26px rgba(245, 197, 24, .75)); }

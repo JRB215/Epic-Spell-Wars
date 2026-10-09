@@ -88,6 +88,7 @@ fun gameView(game: Game, viewer: Int, seats: List<SeatInfo>): JsonObject {
         "round" to game.roundNumber,
         "decks" to obj(
             "main" to game.mainDeckSize, "mainDiscard" to game.mainDiscardSize,
+            "discardTop" to game.mainDiscardTop?.let { cardView(it) },
             "treasure" to game.treasureDeckSize, "deadWizard" to game.deadWizardDeckSize,
         ),
         "players" to game.players.map { playerView(game, it, viewer, seats) },
@@ -114,6 +115,8 @@ fun describe(e: GameEvent, names: List<String>): String = when (e) {
     }
     is GameEvent.TurnStarted -> "${name(names, e.player)} casts."
     is GameEvent.SpellRevealed -> "${name(names, e.player)} reveals ${e.cards.joinToString(", ").ifEmpty { "nothing" }}."
+    is GameEvent.DeckRevealed -> "${name(names, e.player)}'s ${e.by} reveals " +
+        e.cards.joinToString(", ") { it.def.name + if (it.kept) " (kept)" else "" } + "."
     is GameEvent.WildMagicResolved ->
         "${name(names, e.player)}'s Wild Magic becomes ${e.replacement ?: "nothing (no ${e.slot.lowercase()} card left)"}."
     is GameEvent.CardResolving -> "${name(names, e.player)} resolves ${e.card}."
@@ -146,6 +149,7 @@ private fun kind(e: GameEvent) = when (e) {
     is GameEvent.WildMagicResolved -> "wildMagic"
     is GameEvent.CardResolving -> "cardResolving"
     is GameEvent.DiceRolled -> "dice"
+    is GameEvent.DeckRevealed -> "deckRevealed"
     is GameEvent.RollOutcome -> "rollOutcome"
     is GameEvent.DamageDealt -> "damage"
     is GameEvent.Healed -> "heal"
@@ -168,6 +172,10 @@ fun eventView(e: GameEvent, names: List<String>): JsonObject {
         is GameEvent.CardResolving -> { base["player"] = e.player; base["card"] = e.card }
         is GameEvent.DiceRolled -> {
             base["player"] = e.player; base["dice"] = e.dice; base["total"] = e.total; base["reason"] = e.reason
+        }
+        is GameEvent.DeckRevealed -> {
+            base["player"] = e.player; base["by"] = e.by
+            base["cards"] = e.cards.map { mapOf("card" to cardView(it.def), "kept" to it.kept) }
         }
         is GameEvent.RollOutcome -> { base["player"] = e.player; base["card"] = e.card; base["total"] = e.total; base["band"] = e.band }
         is GameEvent.DamageDealt -> { base["target"] = e.target; base["amount"] = e.amount; base["source"] = e.source }

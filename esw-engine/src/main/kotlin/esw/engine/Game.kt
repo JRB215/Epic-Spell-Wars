@@ -48,6 +48,9 @@ class Game(
 
     val maxHp: Int get() = catalog.maxHp
 
+    /** The card on top of the discard pile, face up for everyone to see. */
+    val mainDiscardTop: CardInstance? get() = mainDiscard.lastOrNull()
+
     val mainDeckSize: Int get() = mainDeck.size
     val mainDiscardSize: Int get() = mainDiscard.size
     val treasureDeckSize: Int get() = treasureDeck.size
@@ -322,6 +325,8 @@ class Game(
                 sc.card = found
                 sc.wild = false
             }
+            val shown = aside.map { RevealedCard(it.def, false) } + listOfNotNull(found?.let { RevealedCard(it.def, true) })
+            if (shown.isNotEmpty()) emit(GameEvent.DeckRevealed(p.id, "Wild Magic", shown))
             emit(GameEvent.WildMagicResolved(p.id, sc.slot.name, found?.def?.name))
         }
     }

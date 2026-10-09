@@ -208,6 +208,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.SpellsLocked -> 1400
         is GameEvent.TurnStarted -> 1100
         is GameEvent.SpellRevealed -> 2800
+        is GameEvent.DeckRevealed -> 3400
         is GameEvent.WildMagicResolved -> 1900
         is GameEvent.CardResolving -> 2600
         is GameEvent.DiceRolled -> 2400
@@ -215,7 +216,8 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.DamageDealt -> 1700
         is GameEvent.Healed -> 1500
         is GameEvent.TreasureGained -> 2900
-        is GameEvent.TreasureLost -> 1300
+        // A steal is shown by the flight that follows, so the "loss" half does not pause on its own.
+        is GameEvent.TreasureLost -> if (e.destroyed) 1300 else 0
         is GameEvent.CardAddedToSpell -> 1600
         is GameEvent.PlayerDied -> 2200
         is GameEvent.DeadWizardDrawn -> 1200

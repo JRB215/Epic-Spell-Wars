@@ -93,10 +93,10 @@ internal object CardEffects {
 
         def("bleemax-brainiacs") {
             val glyphs = g.glyphsInSpell(caster)
-            for (c in g.revealTop(2)) {
-                val glyph = c.def.glyph
-                if (glyph != null && glyph in glyphs) g.addToSpell(caster, c) else g.discardToMain(c)
-            }
+            val revealed = g.revealTop(2)
+            val keep = revealed.map { c -> c.def.glyph.let { it != null && it in glyphs } }
+            g.emit(GameEvent.DeckRevealed(caster.id, card.name, revealed.zip(keep) { c, k -> RevealedCard(c.def, k) }))
+            revealed.zip(keep).forEach { (c, k) -> if (k) g.addToSpell(caster, c) else g.discardToMain(c) }
         }
 
         def("beard-o-blastys") {
@@ -104,7 +104,9 @@ internal object CardEffects {
         }
 
         def("pew-and-pews") {
-            for (c in g.revealTop(4)) if (c.def.type == CardType.SOURCE) g.addToSpell(caster, c) else g.discardToMain(c)
+            val revealed = g.revealTop(4)
+            g.emit(GameEvent.DeckRevealed(caster.id, card.name, revealed.map { RevealedCard(it.def, it.def.type == CardType.SOURCE) }))
+            for (c in revealed) if (c.def.type == CardType.SOURCE) g.addToSpell(caster, c) else g.discardToMain(c)
         }
 
         def("muzzlesnaps") { caster.extraDiceThisRound++ }

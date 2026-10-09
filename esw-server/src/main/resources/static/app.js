@@ -159,17 +159,18 @@ function cardNamed(e) {
   return Object.values(cardCache).find((c) => c.name === e.card) || null;
 }
 
+/** What is written under the cards while a card goes off: its rules text. A roll card only says who it aims at. */
+function cardTextLine(e) {
+  const c = cardNamed(e);
+  const parsed = c ? parseCardText(c.text) : null;
+  if (parsed && parsed.bands.length) return `Aimed at ${parsed.target}. Roll Power: the result comes from the dice.`;
+  return c ? c.text : '';
+}
+
 function narration(e) {
   switch (e.k) {
     case 'turnStarted': return `${nameOf(e.player)} begins to cast...`;
     case 'spellRevealed': return `${nameOf(e.player)} reveals ${e.cards.join(' + ') || 'nothing'}`;
-    case 'cardResolving': {
-      const c = cardNamed(e);
-      const parsed = c ? parseCardText(c.text) : null;
-      // A card with a roll table only says who it aims at for now; the result comes after the dice.
-      if (parsed && parsed.bands.length) return `${e.card}: aimed at ${parsed.target}. Rolling the dice...`;
-      return `${e.card}: ${c ? c.text : ''}`;
-    }
     case 'rollOutcome': {
       const c = cardNamed(e);
       const parsed = c ? parseCardText(c.text) : null;
@@ -188,10 +189,11 @@ function preEvent(e) {
     case 'spellsLocked': locked = e.spells; break;
     case 'turnStarted': focus = { player: e.player, animateFlip: false }; feed = []; resolving = null; activePid = e.player; break;
     case 'spellRevealed': if (focus) focus.animateFlip = true; break;
-    case 'cardResolving': resolving = { player: e.player, card: e.card }; break;
+    case 'cardResolving': resolving = { player: e.player, card: e.card, text: cardTextLine(e) }; break;
     default: break;
   }
-  if (focus && e.text !== '' && !NOT_NARRATED.has(e.k)) feed.push({ text: narration(e), k: e.k });
+  // The printed card text goes under the cards (see focusHtml), so only the rolls and results go in the action feed.
+  if (focus && e.text !== '' && !NOT_NARRATED.has(e.k) && e.k !== 'cardResolving') feed.push({ text: narration(e), k: e.k });
   if (feed.length > 12) feed.shift();
 }
 
@@ -237,6 +239,19 @@ const PIPS = {
 const face = (n) => `<div class="face f${n}">${PIPS[n].map(([r, c]) => `<i style="grid-row:${r};grid-column:${c}"></i>`).join('')}</div>`;
 const cubeHtml = () => `<div class="cube rolling" style="animation-duration:${0.45 + Math.random() * 0.25}s">${[1, 2, 3, 4, 5, 6].map(face).join('')}</div>`;
 const FACE_TURN = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(-90deg)', 4: 'rotateY(90deg)', 2: 'rotateX(-90deg)', 5: 'rotateX(90deg)' };
+
+/** Cards turned over from the top of the Main Deck are laid out face up so everyone can see which were kept. */
+function showReveal(e) {
+  const box = $('#reveal');
+  const n = e.cards.length;
+  const word = n === 1 ? 'card' : 'cards';
+  box.innerHTML = `<div class="rcap">${esc(nameOf(e.player))}: ${esc(e.by)} reveals ${n} ${word} from the Main Deck</div>
+    <div class="rcards">${e.cards.map((c, i) => `<div class="rc ${c.kept ? 'kept' : 'tossed'}" style="animation-delay:${i * 260}ms">${cardHtml(c.card, '', 420)}<div class="rtag">${c.kept ? 'Added to the spell' : 'Discarded'}</div></div>`).join('')}</div>`;
+  box.className = '';
+  sound.reveal();
+  clearTimeout(showReveal.timer);
+  showReveal.timer = setTimeout(() => box.classList.add('hidden'), 3200);
+}
 
 /**
  * A newly gained Treasure pops up large in the middle of the table so everyone can read it, holds, then flies to its
@@ -297,8 +312,9 @@ function placeDice(box) {
   const cards = $('#fcards');
   if (cards) {
     const r = cards.getBoundingClientRect();
-    // Just under the cards (the cards box has about 20px of padding below them).
-    box.style.top = (r.bottom - 14) + 'px';
+    // Under the cards and under the line of card text that sits there.
+    const text = $('#ctext');
+    box.style.top = (text ? text.getBoundingClientRect().bottom + 2 : r.bottom - 14) + 'px';
     box.style.left = (r.left + r.width / 2) + 'px';
   } else {
     box.style.top = '38%';
@@ -345,6 +361,7 @@ function postEvent(e) {
       break;
     case 'heal': floatText(e.player, `+${e.amount}`, 'heal'); if (e.player === mine) flash('heal'); sound.heal(); break;
     case 'treasureGained': flyTreasure(e); break;
+    case 'deckRevealed': showReveal(e); break;
     case 'died': banner(`${nameOf(e.player)} is dead!`, true, 2100); sound.death(); break;
     case 'gameWon': banner(e.text, true, 3200); sound.win(); break;
     case 'matchWon': winnerName = nameOf(e.winner); sound.win(); render(); break;
@@ -592,6 +609,16 @@ function mineHtml(p, pickable) {
     <div class="chips">${chipsHtml(p)}</div></div>`;
 }
 
+/** The deck, the discard pile (top card face up), the Treasure pile and the Dead Wizard pile, with their sizes. */
+function pilesHtml() {
+  const d = game.decks;
+  const back = (img) => `<img src="${img}?w=200" alt="" onerror="this.remove()">`;
+  const top = d.discardTop ? (cardCache[d.discardTop.id] = d.discardTop, cardHtml(d.discardTop, '', 200)) : '<div class="empty">empty</div>';
+  const pile = (inner, n, label, cid) => `<div class="bigpile"${cid ? ` data-cid="${esc(cid)}"` : ''}><div class="stack">${inner}</div>${label} <b>${n}</b></div>`;
+  return `<div id="piles">${pile(back(BACKS.main), d.main, 'Deck')}${pile(top, d.mainDiscard, 'Discard', d.discardTop ? d.discardTop.id : null)}`
+    + `${pile(back(BACKS.treasure), d.treasure, 'Treasures')}${pile(back(BACKS.dead), d.deadWizard, 'Dead Wizards')}</div>`;
+}
+
 function turnbarHtml() {
   const chips = locked.map((s) => {
     const p = game.players[s.player];
@@ -612,6 +639,31 @@ function fcHtml(sc, flipped) {
     <div class="fc-front">${sc.card ? cardHtml(sc.card, '', 560) : ''}</div></div><div class="badge">&#10003;</div></div>`;
 }
 
+const MAGIC_WORDS = ['Cantrip', 'Conjuration', 'Invocation'];
+
+/**
+ * The spell's name: Source, Quality and Delivery names read in order, as the rulebook says to read it aloud.
+ * A missing Source is the hero's name and a missing Delivery is a magic word; a missing Quality is just left out.
+ * The word for the card going off right now is highlighted, finished ones are bright and waiting ones are dim.
+ */
+function spellNameHtml(p, cards) {
+  const shown = cards.filter((sc) => sc.card);
+  if (!shown.length) return '<div class="spellname">&nbsp;</div>';
+  const parts = shown.map((sc) => {
+    const active = !!(resolving && focus && resolving.player === focus.player && sc.card.name === resolving.card);
+    return { name: sc.card.name, cls: active ? 'now' : sc.resolved ? 'done' : 'wait' };
+  });
+  if (!shown.some((sc) => sc.slot === 'SOURCE')) parts.unshift({ name: p.hero.name, cls: 'done' });
+  if (!shown.some((sc) => sc.slot === 'DELIVERY')) parts.push({ name: MAGIC_WORDS[p.id % 3], cls: 'done' });
+  return `<div class="spellname">${parts.map((x) => `<span class="w ${x.cls}">${esc(x.name)}</span>`).join(' ')}</div>`;
+}
+
+function ctextHtml() {
+  const active = resolving && focus && resolving.player === focus.player;
+  if (!active) return '<div class="ctext" id="ctext">&nbsp;</div>';
+  return `<div class="ctext" id="ctext"><b>${esc(resolving.card)}:</b> ${esc(resolving.text)}</div>`;
+}
+
 function focusHtml() {
   const p = game.players[focus.player];
   const order = { SOURCE: 0, QUALITY: 1, DELIVERY: 2 };
@@ -624,8 +676,10 @@ function focusHtml() {
   const last = feed.length - 1;
   return `<div class="focus"><div class="fhead"><img src="${esc(p.hero.art)}?w=120" alt="" onerror="this.style.visibility='hidden'">
       <span>${esc(p.name)} casts!</span>${ini ? `<small>Initiative ${ini.initiative}</small>` : ''}</div>
+    ${spellNameHtml(p, flipped ? cards : [])}
     <div class="fbody"><div class="fcards" id="fcards">${cards.map((sc) => fcHtml(sc, flipped)).join('') || '<span class="muted">No cards played.</span>'}</div>
-    <div class="feed">${feed.slice(-4).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div></div>`;
+    <div class="feed">${feed.slice(-4).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div>
+    ${ctextHtml()}</div>`;
 }
 
 function stageHtml() {
@@ -654,6 +708,7 @@ function renderTable(app) {
     <div class="foes">${foes.map((p) => foeSeatHtml(p, pickIds.includes(p.id))).join('')}</div>
     <div class="stage" id="stage">${stageHtml()}</div>
     <div class="log" id="log">${logLines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+    ${pilesHtml()}
     <div class="bottom">${me ? mineHtml(me, pickIds.includes(me.id)) : ''}<div class="hand ${choosing ? 'live' : ''} ${me && !me.alive ? 'deadhand' : ''}" id="hand">${handHtml()}</div></div></div>
     ${gameOverHtml()}`;
   const log = $('#log'); if (log) log.scrollTop = log.scrollHeight;

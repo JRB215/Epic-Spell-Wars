@@ -165,6 +165,34 @@ class RulesTest {
     }
 
     @Test
+    fun cardsRevealedFromTheDeckAreReportedWithWhichOnesWereKept() {
+        val game = setup(mapOf(0 to listOf("pew-and-pews"), 1 to listOf("pam-and-hecubas")), dice = listOf(6, 1))
+        round(game)
+        val reveal = events.filterIsInstance<GameEvent.DeckRevealed>().single { it.by == "Pew and Pew's" }
+        assertEquals(4, reveal.cards.size)
+        // Only Source cards are added to the spell; the rest are discarded.
+        assertTrue(reveal.cards.all { it.kept == (it.def.type == esw.model.CardType.SOURCE) })
+        assertEquals(0, reveal.player)
+    }
+
+    @Test
+    fun aStolenTreasureIsReportedAsLostByTheVictimThenGainedByTheThief() {
+        val game = setup(
+            mapOf(0 to listOf("sphinxions"), 1 to listOf("pam-and-hecubas")), dice = listOf(6, 1),
+            treasures = mapOf(1 to listOf("plink-cannon")),
+        )
+        round(game)
+        val lost = events.indexOfFirst { it is GameEvent.TreasureLost && it.player == 1 && !it.destroyed }
+        val gained = events.indexOfFirst { it is GameEvent.TreasureGained && it.player == 0 }
+        assertTrue(lost >= 0 && gained > lost, "expected a loss for wizard 2 followed by a gain for wizard 1")
+        val gain = events[gained] as GameEvent.TreasureGained
+        assertEquals("Plink Cannon", gain.treasure)
+        assertEquals(1, gain.from)
+        assertTrue(game.players[0].has("plink-cannon"))
+        assertFalse(game.players[1].has("plink-cannon"))
+    }
+
+    @Test
     fun theOwnerChoosesTheOrderOfTwoCardsOfTheSameType() {
         // Wizard 1 plays Bleemax Brainiac's, which can add a Quality; here the second Quality is added by hand,
         // so two Qualities wait in the spell and the owner is asked which goes first.

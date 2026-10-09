@@ -1,7 +1,14 @@
 package esw.engine
 
+import esw.model.CardDef
+
+/** A card turned up from the top of the Main Deck, and whether it was kept (added to the spell) or discarded. */
+data class RevealedCard(val def: CardDef, val kept: Boolean)
+
 /** Things that happened, in order. The server turns these into screen animations and a game log. */
 sealed interface GameEvent {
+    /** Cards were turned over from the top of the Main Deck by [by] (a card name), so everyone can see them. */
+    data class DeckRevealed(val player: Int, val by: String, val cards: List<RevealedCard>) : GameEvent
     data class MatchStarted(val players: List<String>) : GameEvent
     data class GameStarted(val number: Int) : GameEvent
     data class RoundStarted(val number: Int) : GameEvent
