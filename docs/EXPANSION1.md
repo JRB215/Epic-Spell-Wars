@@ -5,8 +5,10 @@ Source: `Expansion 1/ESW2_RULEBOOK_FINAL.pdf` (copyright 2015, local only). My o
 The expansion rulebook describes a complete second set (40 Source, 40 Quality, 40 Delivery, 8 Wild Magic, 8 Heroes,
 25 Treasure, 25 Dead Wizard, 7 Last Wizard Standing tokens, 6 Skull counters, **6 Blood counters, 1 Standee**, 4 dice).
 The owner has only scanned its Dead Wizard cards so far (they were mixed into the base set), and the Tower 2 picture.
-Tower 1 (in `Base/`) is the same kind of piece for the base set; the base `Game Contents.txt` does not list one, so
-whether the base game uses a Standee is unconfirmed.
+
+Tower 1 (in `Base/`) is "Mt. Skullzfyre", listed in the base rulebook's component list ("1 Mt. Skullzfyre"). The base
+rulebook never mentions it again and no base card refers to it, so in the base game it is decoration only.
+Tower 2 (castle with tentacles, in `Expansion 1/`) is the Standee that the expansion rules use.
 
 ## New mechanics the engine does not have
 
