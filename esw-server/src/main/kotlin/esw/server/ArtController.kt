@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
+import java.awt.image.ConvolveOp
+import java.awt.image.Kernel
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Duration
@@ -77,17 +79,11 @@ class ArtController(private val hub: Hub) {
     private fun resized(file: File, width: Int): ByteArray {
         val source = ImageIO.read(file) ?: return file.readBytes()
         if (source.width <= width) return file.readBytes()
-        val height = (source.height.toDouble() * width / source.width).toInt().coerceAtLeast(1)
-        val out = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-        val g = out.createGraphics()
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
-        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
-        g.drawImage(source, 0, 0, width, height, null)
-        g.dispose()
+        val out = shrink(source, width)
         val writer = ImageIO.getImageWritersByFormatName("jpeg").next()
         val params = writer.defaultWriteParam.apply {
             compressionMode = ImageWriteParam.MODE_EXPLICIT
-            compressionQuality = 0.85f
+            compressionQuality = 0.88f
         }
         val bytes = ByteArrayOutputStream()
         ImageIO.createImageOutputStream(bytes).use { stream ->
@@ -96,5 +92,42 @@ class ArtController(private val hub: Hub) {
         }
         writer.dispose()
         return bytes.toByteArray()
+    }
+
+    /**
+     * Shrinks a card scan for the screen. Printed cards are made of tiny halftone dots, and a plain one-step
+     * shrink turns them into a speckled crosshatch. So a very large scan is first softened a touch to blur the
+     * dots away, then halved again and again (which averages neighbouring pixels), and only then finished.
+     */
+    private fun shrink(source: BufferedImage, width: Int): BufferedImage {
+        var current = toRgb(source)
+        if (current.width > width * 3 / 2) current = descreen(current)
+        while (current.width / 2 >= width) current = draw(current, current.width / 2, current.height / 2, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+        val height = (source.height.toDouble() * width / source.width).toInt().coerceAtLeast(1)
+        return draw(current, width, height, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+    }
+
+    private fun toRgb(source: BufferedImage): BufferedImage {
+        if (source.type == BufferedImage.TYPE_INT_RGB) return source
+        val rgb = BufferedImage(source.width, source.height, BufferedImage.TYPE_INT_RGB)
+        val g = rgb.createGraphics()
+        g.drawImage(source, 0, 0, null)
+        g.dispose()
+        return rgb
+    }
+
+    private fun descreen(source: BufferedImage): BufferedImage {
+        val k = floatArrayOf(1f, 2f, 1f, 2f, 4f, 2f, 1f, 2f, 1f).map { it / 16f }.toFloatArray()
+        return ConvolveOp(Kernel(3, 3, k), ConvolveOp.EDGE_NO_OP, null).filter(source, null)
+    }
+
+    private fun draw(source: BufferedImage, width: Int, height: Int, interpolation: Any): BufferedImage {
+        val out = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+        val g = out.createGraphics()
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, interpolation)
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+        g.drawImage(source, 0, 0, width, height, null)
+        g.dispose()
+        return out
     }
 }

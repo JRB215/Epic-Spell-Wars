@@ -283,19 +283,92 @@ function cardHtml(c, extra = '', width = 300) {
     ${img}<div class="txt"><div class="nm">${esc(c.name)}</div><div class="ty">${type}${glyph}</div><div>${esc(c.text)}</div>${ini}</div><div class="gl"></div></div>`;
 }
 
-// Hovering a card in the hand, spotlight or builder already enlarges it; elsewhere a big preview appears.
-document.addEventListener('mouseover', (e) => {
-  const el = e.target.closest ? e.target.closest('[data-cid]') : null;
-  const zoom = $('#zoom');
-  if (!el || el.closest('.hand, .fc, .choices, .bslot')) { zoom.classList.add('hidden'); return; }
-  const c = cardCache[el.dataset.cid];
-  if (!c) return;
-  zoom.innerHTML = cardHtml(c, '', 640);
-  zoom.classList.remove('hidden');
-});
+// ---------------------------------------------------------------- hover descriptions
+const TYPE_INFO = {
+  SOURCE: { name: 'Source', color: 'var(--source)', note: 'Resolves first in a spell.' },
+  QUALITY: { name: 'Quality', color: 'var(--quality)', note: 'Resolves second in a spell.' },
+  DELIVERY: { name: 'Delivery', color: 'var(--delivery)', note: 'Resolves last. Its Initiative number decides who acts first when spells have the same number of cards.' },
+  TREASURE: { name: 'Treasure', color: '#c9a227', note: 'Stays face up in front of its owner. Other wizards can steal it.' },
+  DEAD_WIZARD: { name: 'Dead Wizard', color: '#777', note: 'Drawn by a dead wizard. Gives a bonus at the start of the next game.' },
+  WILD_MAGIC: { name: 'Wild Magic', color: '#7d5cc6', note: 'Stands in for any one spell card. Before the spell resolves, cards are revealed from the deck until one of that type is found.' },
+};
+const GLYPH_INFO = {
+  ARCANE: { name: 'Arcane', color: 'var(--arcane)' },
+  DARK: { name: 'Dark', color: '#222' },
+  ELEMENTAL: { name: 'Elemental', color: 'var(--elemental)' },
+  ILLUSION: { name: 'Illusion', color: 'var(--illusion)' },
+  PRIMAL: { name: 'Primal', color: 'var(--primal)' },
+};
+
+/** Splits "Target: X. Roll Power. 1-4: a 5-9: b 10+: c" into its parts so the table can be laid out clearly. */
+function parseCardText(text) {
+  const m = /^Target:\s*(.*?)\.\s*Roll Power\.\s*(.*)$/s.exec(text || '');
+  if (!m) return { plain: text || '', target: null, bands: [] };
+  const bands = m[2].split(/\s(?=(?:1-4|5-9|10\+):)/).map((part) => {
+    const b = /^(1-4|5-9|10\+):\s*(.*)$/s.exec(part.trim());
+    return b ? { range: b[1], text: b[2] } : null;
+  }).filter(Boolean);
+  return { plain: '', target: m[1], bands };
+}
+
+function tipHtml(c) {
+  const type = TYPE_INFO[c.type] || { name: c.type, color: '#555', note: '' };
+  const glyph = c.glyph ? GLYPH_INFO[c.glyph] : null;
+  const parsed = parseCardText(c.text);
+  const rolls = parsed.bands.length > 0;
+  const pills = [`<span class="pill" style="background:${type.color}">${esc(type.name)}</span>`];
+  if (glyph) pills.push(`<span class="pill glyph"><i style="background:${glyph.color}"></i>${esc(glyph.name)} glyph</span>`);
+  if (c.initiative != null) pills.push(`<span class="pill ini">Initiative ${c.initiative}</span>`);
+  if (c.countsAsGlyph) {
+    pills.push(`<span class="pill glyph"><i style="background:${GLYPH_INFO[c.countsAsGlyph].color}"></i>Counts as a ${esc(GLYPH_INFO[c.countsAsGlyph].name)} card</span>`);
+  }
+  const body = rolls
+    ? `<div class="tt-target"><b>Target:</b> ${esc(parsed.target)}</div>
+       <div class="tt-roll">Power Roll</div>
+       <table class="tt-bands">${parsed.bands.map((b) => `<tr><td>${esc(b.range)}</td><td>${esc(b.text)}</td></tr>`).join('')}</table>`
+    : `<div class="tt-text">${esc(parsed.plain)}</div>`;
+  const notes = [type.note];
+  if (rolls && glyph) notes.push(`Power Roll: roll one die for each card in the spell with the ${glyph.name} glyph, add them up, and read the result in the table.`);
+  if (glyph && !rolls && c.type !== 'TREASURE') notes.push(`Counts toward "each different glyph in your spell".`);
+  return `<div class="tt-head" style="border-color:${type.color}"><span class="tt-name">${esc(c.name)}</span></div>
+    <div class="tt-pills">${pills.join('')}</div>${body}
+    <div class="tt-notes">${notes.filter(Boolean).map((n) => `<div>${esc(n)}</div>`).join('')}</div>`;
+}
+
+let lastMouse = { x: -1, y: -1 };
+function hideTip() { $('#tip').classList.add('hidden'); }
+function showTip(c, el) {
+  const tip = $('#tip');
+  tip.innerHTML = tipHtml(c);
+  tip.style.borderColor = (TYPE_INFO[c.type] || {}).color || 'var(--gold)';
+  tip.classList.remove('hidden');
+  const r = el.getBoundingClientRect();
+  const w = tip.offsetWidth;
+  const h = tip.offsetHeight;
+  let left = r.left + r.width / 2 - w / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  let top = r.top - h - 10;
+  if (top < 8) top = Math.min(window.innerHeight - h - 8, r.bottom + 10);
+  tip.style.left = left + 'px';
+  tip.style.top = Math.max(8, top) + 'px';
+}
+function tipFor(target) {
+  const el = target && target.closest ? target.closest('[data-cid]') : null;
+  const c = el ? cardCache[el.dataset.cid] : null;
+  if (el && c) showTip(c, el); else hideTip();
+}
+document.addEventListener('mouseover', (e) => { lastMouse = { x: e.clientX, y: e.clientY }; tipFor(e.target); });
+document.addEventListener('mousemove', (e) => { lastMouse = { x: e.clientX, y: e.clientY }; });
 document.addEventListener('mouseout', (e) => {
-  if (!e.relatedTarget || !(e.relatedTarget.closest && e.relatedTarget.closest('[data-cid]'))) $('#zoom').classList.add('hidden');
+  if (!e.relatedTarget || !(e.relatedTarget.closest && e.relatedTarget.closest('[data-cid]'))) hideTip();
 });
+document.addEventListener('dragstart', hideTip);
+/** The table is redrawn after every event; keep the description up if the mouse is still resting on a card. */
+function refreshTip() {
+  if (lastMouse.x < 0) return;
+  const el = document.elementFromPoint(lastMouse.x, lastMouse.y);
+  tipFor(el);
+}
 
 // ---------------------------------------------------------------- screens
 function render() {
@@ -479,6 +552,7 @@ function renderTable(app) {
   const log = $('#log'); if (log) log.scrollTop = log.scrollHeight;
   afterDraw(me);
   wireTable();
+  refreshTip();
 }
 
 /** Small animations that need the new elements to exist first. */

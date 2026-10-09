@@ -206,8 +206,22 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .face.f3 { transform: rotateY(90deg) translateZ(38px); } .face.f4 { transform: rotateY(-90deg) translateZ(38px); }
 .face.f2 { transform: rotateX(90deg) translateZ(38px); } .face.f5 { transform: rotateX(-90deg) translateZ(38px); }
 #spotlight { position: fixed; inset: 0; z-index: 55; background: rgba(8, 4, 14, .8); display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; pointer-events: none; animation: fadein .25s; }
-#zoom { position: fixed; z-index: 70; right: 300px; top: 70px; width: 300px; pointer-events: none; }
-#zoom .card { width: 300px; box-shadow: 0 8px 30px #000; }
+#tip { position: fixed; z-index: 90; width: 360px; background: #1c1428; border: 3px solid var(--gold); border-radius: 12px; padding: 12px 14px 10px; box-shadow: 0 10px 32px rgba(0, 0, 0, .8); pointer-events: none; font-size: 1rem; line-height: 1.35; }
+#tip .tt-head { border-bottom: 3px solid; padding-bottom: 6px; margin-bottom: 8px; }
+#tip .tt-name { font-family: Impact, "Arial Black", sans-serif; letter-spacing: .04em; font-size: 1.45rem; color: var(--gold); }
+#tip .tt-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+#tip .pill { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: #444; color: #fff; }
+#tip .pill.glyph { background: #2f2241; border: 1px solid var(--line); }
+#tip .pill.glyph i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #fff; display: inline-block; }
+#tip .pill.ini { background: var(--gold); color: #1b1200; }
+#tip .tt-text { font-size: 1.15rem; color: var(--ink); margin: 6px 0; }
+#tip .tt-target { font-size: 1.05rem; margin: 4px 0; }
+#tip .tt-roll { font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+#tip .tt-bands { width: 100%; border-collapse: collapse; margin: 4px 0 6px; }
+#tip .tt-bands td { padding: 4px 6px; border-bottom: 1px dotted #3a2d4e; vertical-align: top; }
+#tip .tt-bands td:first-child { width: 52px; font-family: Impact, sans-serif; color: var(--gold); white-space: nowrap; }
+#tip .tt-notes { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); font-size: .8rem; color: var(--muted); }
+#tip .tt-notes div + div { margin-top: 3px; }
 #toasts { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .toast { background: #3b1620; border: 2px solid var(--red); border-radius: 8px; padding: 8px 14px; animation: popin .2s; }
 .flash { position: fixed; inset: 0; z-index: 45; pointer-events: none; animation: flash .6s forwards; }

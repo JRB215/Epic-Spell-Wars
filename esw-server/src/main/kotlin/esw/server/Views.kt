@@ -36,6 +36,7 @@ fun cardView(def: CardDef, uid: Int? = null): JsonObject = obj(
     "type" to def.type.name,
     "glyph" to def.glyph?.name,
     "initiative" to def.initiative,
+    "countsAsGlyph" to def.countsAsGlyph,
     "text" to def.text,
     "art" to artUrl(def),
 )
