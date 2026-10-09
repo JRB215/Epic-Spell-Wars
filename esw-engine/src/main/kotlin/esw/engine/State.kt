@@ -25,6 +25,9 @@ class Spell {
 
     /** Set by Pam and Hecuba's: the Delivery targets each foe instead. */
     var deliveryEachFoe = false
+
+    /** True once the spell has been turned face up for everyone to see. */
+    var revealed = false
 }
 
 class PlayerState(val id: Int, val name: String, val hero: HeroDef) {

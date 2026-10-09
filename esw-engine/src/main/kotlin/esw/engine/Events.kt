@@ -5,6 +5,8 @@ sealed interface GameEvent {
     data class MatchStarted(val players: List<String>) : GameEvent
     data class GameStarted(val number: Int) : GameEvent
     data class RoundStarted(val number: Int) : GameEvent
+    /** Everyone has drawn their cards for the round. Sent so screens can show the new hands. */
+    data object HandsDealt : GameEvent
     data class SpellsLocked(val spells: List<LockedSpell>) : GameEvent
     data class TurnStarted(val player: Int) : GameEvent
     data class SpellRevealed(val player: Int, val cards: List<String>) : GameEvent

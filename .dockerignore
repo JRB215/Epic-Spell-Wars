@@ -1,0 +1,17 @@
+.git
+.gradle
+**/build
+.idea
+# Raw scans and pictures never go into the image; they are mounted at run time.
+Base/Source
+Base/Quality
+Base/Delivery
+Base/Graveyards
+Base/Treasures
+Base/Character Sheets
+Base/Card Back and Wild Card
+Base/cards-upright
+Base/*.zip
+Base/*.pdf
+Expansion*
+assets
