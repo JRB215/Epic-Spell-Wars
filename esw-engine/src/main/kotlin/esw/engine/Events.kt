@@ -34,4 +34,12 @@ sealed interface GameEvent {
     data class Info(val text: String) : GameEvent
 }
 
-data class LockedSpell(val player: Int, val components: Int, val initiative: Int)
+/** One wizard's place in the announced turn order. [tied] means another wizard shares this exact place and they will roll off. */
+data class LockedSpell(
+    val player: Int,
+    val components: Int,
+    val initiative: Int,
+    val impatient: Boolean = false,
+    val actsLast: Boolean = false,
+    val tied: Boolean = false,
+)

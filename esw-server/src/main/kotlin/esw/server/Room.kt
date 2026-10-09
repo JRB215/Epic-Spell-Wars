@@ -205,7 +205,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.GameStarted -> 1500
         is GameEvent.RoundStarted -> 900
         is GameEvent.HandsDealt -> 0
-        is GameEvent.SpellsLocked -> 1400
+        is GameEvent.SpellsLocked -> 4200
         is GameEvent.TurnStarted -> 1100
         is GameEvent.SpellRevealed -> 2800
         is GameEvent.DeckRevealed -> 3400

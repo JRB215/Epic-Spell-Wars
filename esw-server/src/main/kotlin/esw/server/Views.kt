@@ -110,8 +110,10 @@ fun describe(e: GameEvent, names: List<String>): String = when (e) {
     is GameEvent.GameStarted -> "Game ${e.number} begins."
     is GameEvent.RoundStarted -> "Round ${e.number}."
     is GameEvent.HandsDealt -> ""
-    is GameEvent.SpellsLocked -> "All spells are ready: " + e.spells.joinToString(", ") {
-        "${name(names, it.player)} (${it.components} card${if (it.components == 1) "" else "s"}, Initiative ${it.initiative})"
+    is GameEvent.SpellsLocked -> "Turn order: " + e.spells.withIndex().joinToString(", ") { (i, it) ->
+        "${i + 1}. ${name(names, it.player)} (${it.components} card${if (it.components == 1) "" else "s"}, Initiative ${it.initiative}" +
+            (if (it.impatient) ", Impatient" else "") + (if (it.actsLast) ", chose to act last" else "") +
+            (if (it.tied) ", tied: will roll off" else "") + ")"
     }
     is GameEvent.TurnStarted -> "${name(names, e.player)} casts."
     is GameEvent.SpellRevealed -> "${name(names, e.player)} reveals ${e.cards.joinToString(", ").ifEmpty { "nothing" }}."
@@ -185,7 +187,10 @@ fun eventView(e: GameEvent, names: List<String>): JsonObject {
         is GameEvent.GameWon -> { base["winner"] = e.winner; base["tokens"] = e.tokens }
         is GameEvent.MatchWon -> base["winner"] = e.winner
         is GameEvent.SpellsLocked -> base["spells"] = e.spells.map {
-            mapOf("player" to it.player, "components" to it.components, "initiative" to it.initiative)
+            mapOf(
+                "player" to it.player, "components" to it.components, "initiative" to it.initiative,
+                "impatient" to it.impatient, "actsLast" to it.actsLast, "tied" to it.tied,
+            )
         }
         else -> Unit
     }

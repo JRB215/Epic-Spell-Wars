@@ -189,7 +189,6 @@ class Game(
             }.awaitAll()
         }
         for ((p, choice) in choices) p.spell = buildSpell(p, choice)
-        emit(GameEvent.SpellsLocked(living.map { LockedSpell(it.id, it.spell!!.cards.size, initiativeOf(it)) }))
 
         for (p in living) {
             if (p.has("methy-ions-backpack") && decisions.chooseYesNo(p.id, "Discard Methy-Ion's Backpack to act last this round?")) {
@@ -197,6 +196,7 @@ class Game(
                 p.actLast = true
             }
         }
+        emit(GameEvent.SpellsLocked(turnOrderPreview(living)))
 
         while (true) {
             val next = pickNextActor() ?: break
@@ -238,6 +238,24 @@ class Game(
         val delivery = p.spell?.cards?.firstOrNull { it.slot == CardType.DELIVERY }
         val base = if (delivery == null || delivery.wild) 0 else delivery.card.def.initiative ?: 0
         return base + if (p.has("methy-ions-backpack")) 10 else 0
+    }
+
+    /**
+     * The order the wizards will act in, as announced once every spell is locked: Impatient first, then fewer cards
+     * before more, then the higher Initiative, and wizards who chose to act last at the end. Wizards who tie on all of
+     * that are flagged, because they will roll a die when their turn comes.
+     */
+    private fun turnOrderPreview(living: List<PlayerState>): List<LockedSpell> {
+        data class Key(val last: Boolean, val impatient: Boolean, val components: Int, val initiative: Int)
+        fun key(p: PlayerState) = Key(p.actLast, isImpatient(p), p.spell!!.cards.size, initiativeOf(p))
+        val sorted = living.sortedWith(
+            compareBy<PlayerState>({ key(it).last }, { if (key(it).impatient) 0 else 1 }, { key(it).components }, { -key(it).initiative }),
+        )
+        val counts = sorted.groupingBy { key(it) }.eachCount()
+        return sorted.map {
+            val k = key(it)
+            LockedSpell(it.id, k.components, k.initiative, impatient = k.impatient, actsLast = k.last, tied = (counts[k] ?: 0) > 1)
+        }
     }
 
     private fun isImpatient(p: PlayerState) =

@@ -165,6 +165,29 @@ class RulesTest {
     }
 
     @Test
+    fun theAnnouncedTurnOrderListsWizardsInTheOrderTheyWillAct() {
+        // p0: one card, Initiative 14. p1: one card, Initiative 2. p2: two cards. Impatient (p3) jumps the queue.
+        val game = setup(mapOf(
+            0 to listOf("fist-o-nature"), 1 to listOf("gore-nado"), 2 to listOf("king-oberons", "lightning-bolt"),
+            3 to listOf("impatient", "mercy-killing", "pam-and-hecubas"),
+        ))
+        round(game)
+        val locked = events.filterIsInstance<GameEvent.SpellsLocked>().single().spells
+        assertEquals(listOf(3, 0, 1, 2), locked.map { it.player })
+        assertTrue(locked.first { it.player == 3 }.impatient)
+        assertTrue(locked.none { it.tied })
+        assertEquals(locked.map { it.player }, turnOrder())
+    }
+
+    @Test
+    fun wizardsWhoTieOnEverythingAreFlaggedAsTied() {
+        val game = setup(mapOf(0 to listOf("king-oberons"), 1 to listOf("pam-and-hecubas")), dice = listOf(6, 1))
+        round(game)
+        val locked = events.filterIsInstance<GameEvent.SpellsLocked>().single().spells
+        assertEquals(listOf(true, true), locked.map { it.tied })
+    }
+
+    @Test
     fun cardsRevealedFromTheDeckAreReportedWithWhichOnesWereKept() {
         val game = setup(mapOf(0 to listOf("pew-and-pews"), 1 to listOf("pam-and-hecubas")), dice = listOf(6, 1))
         round(game)

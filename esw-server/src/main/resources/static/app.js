@@ -240,6 +240,29 @@ const face = (n) => `<div class="face f${n}">${PIPS[n].map(([r, c]) => `<i style
 const cubeHtml = () => `<div class="cube rolling" style="animation-duration:${0.45 + Math.random() * 0.25}s">${[1, 2, 3, 4, 5, 6].map(face).join('')}</div>`;
 const FACE_TURN = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(-90deg)', 4: 'rotateY(90deg)', 2: 'rotateX(-90deg)', 5: 'rotateX(90deg)' };
 
+/** Once every spell is locked in, the order the wizards will act in is announced, with the reason for each place. */
+function showOrder(e) {
+  const box = $('#order');
+  const why = (s) => {
+    if (s.impatient) return 'Impatient: goes first';
+    if (s.actsLast) return 'chose to act last';
+    const n = `${s.components} card${s.components === 1 ? '' : 's'}`;
+    return `${n} &middot; Initiative ${s.initiative}` + (s.tied ? ' <span class="otie">tied: rolls a die</span>' : '');
+  };
+  box.innerHTML = `<div class="ocap">All spells are locked in</div><div class="osub">Turn order</div>
+    <div class="orows">${e.spells.map((s, i) => {
+      const p = game.players[s.player];
+      return `<div class="orow" style="animation-delay:${i * 150}ms"><span class="onum">${i + 1}</span>
+        <img src="${esc(p.hero.art)}?w=100" alt="" onerror="this.style.visibility='hidden'">
+        <span class="oname">${esc(p.name)}</span><span class="owhy">${why(s)}</span></div>`;
+    }).join('')}</div>
+    <div class="onote">Fewer cards go first. Ties are settled by the higher Initiative, then a die roll.</div>`;
+  box.className = '';
+  sound.round();
+  clearTimeout(showOrder.timer);
+  showOrder.timer = setTimeout(() => box.classList.add('hidden'), 3800);
+}
+
 /** Cards turned over from the top of the Main Deck are laid out face up so everyone can see which were kept. */
 function showReveal(e) {
   const box = $('#reveal');
@@ -349,7 +372,7 @@ function postEvent(e) {
   switch (e.k) {
     case 'roundStarted': banner(e.text, false, 1200); sound.round(); break;
     case 'gameStarted': banner(e.text, true, 1400); break;
-    case 'spellsLocked': banner('All spells are locked in!', false, 1200); break;
+    case 'spellsLocked': showOrder(e); break;
     case 'turnStarted': banner(`${nameOf(e.player)}'s turn`, false, 1100); break;
     case 'spellRevealed': sound.reveal(); break;
     case 'cardResolving': sound.card(); break;
@@ -614,16 +637,16 @@ function pilesHtml() {
   const d = game.decks;
   const back = (img) => `<img src="${img}?w=200" alt="" onerror="this.remove()">`;
   const top = d.discardTop ? (cardCache[d.discardTop.id] = d.discardTop, cardHtml(d.discardTop, '', 200)) : '<div class="empty">empty</div>';
-  const pile = (inner, n, label, cid) => `<div class="bigpile"${cid ? ` data-cid="${esc(cid)}"` : ''}><div class="stack">${inner}</div>${label} <b>${n}</b></div>`;
+  const pile = (inner, n, label, cid, cls = '') => `<div class="bigpile ${cls}"${cid ? ` data-cid="${esc(cid)}"` : ''}><div class="stack">${inner}</div>${label} <b>${n}</b></div>`;
   return `<div id="piles">${pile(back(BACKS.main), d.main, 'Deck')}${pile(top, d.mainDiscard, 'Discard', d.discardTop ? d.discardTop.id : null)}`
-    + `${pile(back(BACKS.treasure), d.treasure, 'Treasures')}${pile(back(BACKS.dead), d.deadWizard, 'Dead Wizards')}</div>`;
+    + `<div class="smallpiles">${pile(back(BACKS.treasure), d.treasure, 'Treasure', null, 'small')}${pile(back(BACKS.dead), d.deadWizard, 'Dead', null, 'small')}</div></div>`;
 }
 
 function turnbarHtml() {
-  const chips = locked.map((s) => {
+  const chips = locked.map((s, i) => {
     const p = game.players[s.player];
     const cls = ['tchip', activePid === s.player ? 'now' : '', p && p.acted ? 'done' : ''].join(' ');
-    return `<span class="${cls}">${esc(nameOf(s.player))} &middot; ${s.components} card${s.components === 1 ? '' : 's'} &middot; Initiative ${s.initiative}</span>`;
+    return `<span class="${cls}">${i + 1}. ${esc(nameOf(s.player))} &middot; ${s.components} card${s.components === 1 ? '' : 's'} &middot; Initiative ${s.initiative}${s.tied ? ' (tie)' : ''}</span>`;
   }).join('');
   const d = game.decks;
   const pile = (img, n, label) => `<div class="pile"><img src="${img}?w=80" alt="" onerror="this.style.display='none'">${label} ${n}</div>`;
