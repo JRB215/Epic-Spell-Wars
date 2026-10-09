@@ -404,14 +404,34 @@ function wireTop() {
   const m = $('#mute'); if (m) m.onclick = () => { muted = !muted; local.set('eswMute', muted ? '1' : '0'); audioCtx(); m.textContent = muted ? 'Sound off' : 'Sound on'; };
 }
 
+/** What the server can see: build number, picture counts and game pieces. Helps when pictures do not show up. */
+let statusData = null;
+function loadStatus() {
+  fetch('/api/status').then((r) => r.json()).then((s) => { statusData = s; showStatus(); }).catch(() => { /* not important */ });
+}
+function showStatus() {
+  const el = $('#status');
+  if (!el || !statusData) return;
+  const s = statusData;
+  const decks = ['Source', 'Quality', 'Delivery', 'Treasures', 'Graveyards', 'Character Sheets'];
+  const counts = decks.map((d) => `${d} ${s.folders[d.toLowerCase()] || 0}`).join(', ');
+  const names = { skull: 'skull', lws: 'win token', marker: 'blood marker', tower1: 'tower 1', tower2: 'tower 2' };
+  const pieces = Object.keys(names).map((k) => (s.pieces[k] ? `${names[k]} ✓` : `<span class="bad">${names[k]} missing</span>`)).join(', ');
+  const missing = Object.values(s.pieces).some((v) => !v);
+  el.innerHTML = `Build ${esc(String(s.version).slice(0, 7))}. Pictures found: ${esc(counts)}. Game pieces: ${pieces}.`
+    + (missing ? `<br><span class="bad">Some game pieces are missing. Copy the <b>Pieces</b> folder from epic-spell-wars-art.zip into ${esc(s.assets)}</span>` : '');
+}
+
 function renderLobby(app) {
   if (!$('#gamesList')) {
     app.innerHTML = `<div class="screen">${topActions()}
       <div class="grid2"><div class="panel"><h2>Games</h2>
         <div class="top-actions"><input id="title" type="text" maxlength="30" placeholder="Name your game (optional)"><button id="create" class="btn">Create game</button></div>
         <div id="gamesList"></div></div>
-      <div class="panel"><h2>Most wins</h2><div id="board"></div></div></div></div>`;
+      <div class="panel"><h2>Most wins</h2><div id="board"></div></div></div>
+      <p class="status" id="status"></p></div>`;
     wireTop();
+    loadStatus();
     $('#create').onclick = () => send({ t: 'createGame', title: $('#title').value });
     $('#title').onkeydown = (e) => { if (e.key === 'Enter') $('#create').click(); };
   }
@@ -543,6 +563,7 @@ function renderTable(app) {
   const choosing = prompt && prompt.kind === 'spell' && !promptSent;
   app.innerHTML = `<div class="table">
     <div class="topbar"><b>EPIC SPELL WARS</b><span>Game ${game.game} &middot; Round ${game.round}</span><span class="spacer"></span>
+      <small class="muted">${statusData ? 'build ' + esc(String(statusData.version).slice(0, 7)) : ''}</small>
       <button class="btn secondary" id="mute">${muted ? 'Sound off' : 'Sound on'}</button><button class="btn secondary" id="leave">Leave</button></div>
     <div class="foes">${foes.map((p) => foeSeatHtml(p, pickIds.includes(p.id))).join('')}</div>
     <div class="stage" id="stage">${stageHtml()}</div>
@@ -699,4 +720,5 @@ function wireTable() {
 
 // ---------------------------------------------------------------- go
 connect();
+loadStatus();
 render();

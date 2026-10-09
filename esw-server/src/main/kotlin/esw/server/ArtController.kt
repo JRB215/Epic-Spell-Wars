@@ -1,5 +1,6 @@
 package esw.server
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -21,12 +22,15 @@ import javax.imageio.ImageWriteParam
 
 private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif")
 
+/** The prepared game pieces the screens look for in the Pieces folder (made by tools/make_pieces.py). */
+private val PIECE_NAMES = listOf("skull", "lws", "marker", "tower1", "tower2")
+
 /**
  * Serves card pictures from the assets folder, so art can be swapped without rebuilding.
  * Names are matched leniently: upper/lower case, any image extension, and any sub-folder.
  */
 @RestController
-class ArtController(private val hub: Hub) {
+class ArtController(private val hub: Hub, @Value("\${esw.version:dev}") private val version: String) {
     private val cache = ConcurrentHashMap<String, ByteArray>()
 
     @Volatile private var index: Map<String, File> = emptyMap()
@@ -52,6 +56,20 @@ class ArtController(private val hub: Hub) {
         }
         // Last resort: the same file name in any folder.
         return index.entries.firstOrNull { it.key.endsWith("/${name.lowercase()}") }?.value
+    }
+
+    /** What the server can see: which build is running and how many pictures it found in each folder. */
+    @GetMapping("/api/status", produces = ["application/json"])
+    fun status(): String {
+        rebuildIndex()
+        val perFolder = index.keys.groupingBy { it.substringBefore('/') }.eachCount()
+        val pieces = PIECE_NAMES.associateWith { index.containsKey("pieces/$it") }
+        return obj(
+            "version" to version,
+            "assets" to hub.assets.absolutePath,
+            "folders" to perFolder.toSortedMap(),
+            "pieces" to pieces,
+        ).toString()
     }
 
     @GetMapping("/art/{folder}/{name}")

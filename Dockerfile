@@ -4,7 +4,8 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY esw-server/build/libs/app.jar app.jar
 # Card pictures and the leaderboard live in the mounted folder, so art can change without a rebuild.
-ENV PORT=80 ESW_ASSETS=/custom-assets
+ARG GIT_SHA=unknown
+ENV PORT=80 ESW_ASSETS=/custom-assets ESW_VERSION=${GIT_SHA}
 VOLUME /custom-assets
 EXPOSE 80
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

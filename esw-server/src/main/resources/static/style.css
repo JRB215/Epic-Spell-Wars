@@ -53,6 +53,8 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .game-row:last-child { border-bottom: 0; }
 .game-row .grow { flex: 1; min-width: 0; }
 .game-row b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { margin-top: 18px; font-size: .8rem; color: var(--muted); line-height: 1.5; }
+.status .bad { color: #ff7a6e; }
 .lb-row { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px dashed var(--line); }
 .lb-row:last-child { border-bottom: 0; }
 .tag { display: inline-block; font-size: .72rem; padding: 2px 8px; border-radius: 99px; background: var(--panel2); border: 1px solid var(--line); color: var(--muted); }
