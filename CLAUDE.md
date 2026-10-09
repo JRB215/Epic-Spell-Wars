@@ -76,6 +76,8 @@ Give this file to Claude Code at the start of the new project (or put it in the 
 
 ## Status and workflow notes
 
+- Expansion 1 is **paused** (owner's call, 2026-10-09): the owner still has to scan it and wants live testing of the base game first. Do not start it unprompted.
+
 - Done and tested: card data, rules engine (300 random matches pass the card audit), server, browser screens, Docker image definition, CI workflows.
 - Not yet seen with real people: two or more humans at one table, the "bot takes over for a dropped player" vote, sounds (only the code was checked), and the Docker image (CI builds it; this PC has no Docker).
 - Owner said (2026-10-08): base-level work can be built and published without pausing for approval each time. Pause publishing only while the owner is giving active feedback after testing.
