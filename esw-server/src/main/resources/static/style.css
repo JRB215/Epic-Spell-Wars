@@ -59,16 +59,17 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .seat-num { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: #1b1200; display: grid; place-items: center; font-weight: 800; }
 
 /* ---------- table ---------- */
-.table { display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto 1fr auto; min-height: 100vh; gap: 8px; padding: 8px; }
+.table { display: grid; grid-template-columns: 1fr 280px; grid-template-rows: auto minmax(0, 1fr) auto; height: 100vh; overflow: hidden; gap: 8px; padding: 8px; }
 .table .topbar { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 4px 8px; }
 .table .topbar b { color: var(--gold); font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.2rem; }
 .table .topbar .spacer { flex: 1; }
-.table .stage { grid-column: 1; grid-row: 2; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 230px; }
-.table .log { grid-column: 2; grid-row: 2 / 4; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 8px; overflow-y: auto; font-size: .82rem; line-height: 1.35; }
+.table .stage { grid-column: 1; grid-row: 2; overflow: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.table .log { grid-column: 2; grid-row: 2 / 4; min-height: 0; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 8px; overflow-y: auto; font-size: .82rem; line-height: 1.35; }
 .table .log div { padding: 2px 0; border-bottom: 1px dotted #3a2d4e; }
 .table .bottom { grid-column: 1; grid-row: 3; }
 @media (max-width: 900px) {
-  .table { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; height: auto; min-height: 100vh; }
+  .table { grid-template-columns: 1fr; grid-template-rows: auto auto auto; height: auto; min-height: 100vh; overflow: visible; }
+  .table .stage { min-height: 230px; }
   .table .log { grid-column: 1; grid-row: 4; max-height: 200px; }
 }
 

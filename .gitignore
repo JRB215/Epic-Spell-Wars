@@ -26,3 +26,9 @@ build/
 *.iml
 .kotlin/
 node_modules/
+
+# Loose pictures dropped in the set folders (tokens, markers, towers, scans) stay local
+/Base/*.png
+/Base/*.jpg
+/Expansion*/*.png
+/Expansion*/*.jpg
