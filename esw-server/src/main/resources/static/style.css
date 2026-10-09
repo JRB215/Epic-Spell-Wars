@@ -63,21 +63,24 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .seat-num { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: #1b1200; display: grid; place-items: center; font-weight: 800; }
 
 /* ---------- the table: top bar, opponents, stage, my hand, log ---------- */
-.table { display: grid; grid-template-columns: minmax(0, 1fr) 170px; grid-template-rows: auto auto minmax(0, 1fr) auto; height: 100vh; overflow: hidden; gap: 6px 8px; padding: 6px 8px 8px; }
+.table { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; height: 100vh; overflow: hidden; gap: 6px 8px; padding: 6px 8px 8px; }
 .topbar { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 2px 6px; }
 .topbar b { color: var(--gold); font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.2rem; }
 .topbar .spacer { flex: 1; }
 .topbar .btn { padding: .3em .9em; box-shadow: 0 2px 0 #000; }
-.foes { grid-column: 1; grid-row: 2; display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap; }
-.stage { grid-column: 1; grid-row: 3; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 2px 4px; }
+.foes { grid-column: 1; grid-row: 2; display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap; padding-right: 188px; }
+.stage { grid-column: 1; grid-row: 3; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 2px 188px 2px 4px; }
 .bottom { grid-column: 1; grid-row: 4; position: relative; z-index: 20; display: flex; gap: 12px; align-items: flex-end; }
-.log { grid-column: 2; grid-row: 2 / 5; min-height: 0; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 6px; overflow-y: auto; font-size: .68rem; line-height: 1.25; }
+/* A short box in the top-right corner; it ends about a third of the way down the spell area. */
+.log { position: fixed; top: 46px; right: 8px; width: 172px; height: 28.5vh; z-index: 30; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 6px; overflow-y: auto; font-size: .68rem; line-height: 1.25; }
 .log div { padding: 2px 0; border-bottom: 1px dotted #3a2d4e; }
 .log::-webkit-scrollbar { width: 6px; } .log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 @media (max-width: 1000px) {
   .table { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto auto; height: auto; min-height: 100vh; overflow: visible; }
   .foes { flex-wrap: wrap; }
-  .log { grid-column: 1; grid-row: 5; max-height: 200px; }
+  .log { position: static; width: auto; height: auto; grid-column: 1; grid-row: 5; max-height: 200px; }
+  .foes { padding-right: 0; }
+  .stage { padding-right: 4px; }
   .bottom { flex-wrap: wrap; }
   :root { --hand-w: 26vw; --focus-w: 30vw; }
 }
