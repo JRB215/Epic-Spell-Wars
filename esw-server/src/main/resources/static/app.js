@@ -506,7 +506,8 @@ function lwsHtml(n) {
 }
 
 function chipsHtml(p) {
-  return p.treasures.map((t) => { cardCache[t.id] = t; return `<span class="chip" data-cid="${esc(t.id)}">${esc(t.name)}</span>`; }).join('')
+  const die = p.bonusDie ? `<span class="chip die" title="Slag Shangri-La: this die is added to every Power Roll on ${esc(p.name)}'s first turn, then removed.">Slag die +${p.bonusDie} (first turn)</span>` : '';
+  return die + p.treasures.map((t) => { cardCache[t.id] = t; return `<span class="chip" data-cid="${esc(t.id)}">${esc(t.name)}</span>`; }).join('')
     + (p.deadCards ? `<span class="chip dead">${p.deadCards} dead wizard card${p.deadCards > 1 ? 's' : ''}</span>` : '');
 }
 

@@ -63,6 +63,7 @@ private fun playerView(game: Game, p: PlayerState, viewer: Int, seats: List<Seat
         "art" to heroArtUrl(p.hero.artScan), "board" to heroArtUrl(p.hero.boardScan),
     ),
     "hp" to p.hp,
+    "bonusDie" to p.bonusDie,
     "maxHp" to game.maxHp,
     "alive" to p.alive,
     "tokens" to p.tokens,

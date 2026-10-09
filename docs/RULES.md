@@ -128,6 +128,7 @@ The rulebook and cards leave these open. The engine picks the simplest reading. 
 - A deck that runs out is reshuffled from its discard pile. If both are empty, nothing is drawn.
 - Treasure and Dead Wizard cards are reshuffled the same way.
 - Each round every living wizard draws back up to 8 cards (9 with the Thinking Cap). Dead wizards draw one Dead Wizard card each round.
+- Slag Shangri-La: at the start of the next game the die is rolled once (everyone sees the roll) and its number stays as a marker on the wizard's profile. That number is added to every Power Roll the wizard makes on their first turn (not rolled again each time), then the marker is removed. Two Slag cards give two dice, added together.
 - Backlash from Beyond happens the moment it is drawn: 2 damage to a foe of the drawer's choice, then it is discarded.
 - Wild Furicorn Meadow: at the end of the game, a Wild Magic card is taken out of the Main Deck (or discard) and goes into that wizard's first hand next game.
 - A game that lasts 300 rounds without a winner is a draw. No token is given.

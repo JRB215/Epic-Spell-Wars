@@ -47,7 +47,8 @@ class PlayerState(val id: Int, val name: String, val hero: HeroDef) {
     var acted = false
     var actLast = false
     var extraDiceThisRound = 0
-    var firstTurnDie = false
+    /** Slag Shangri-La: a die rolled at the start of the game, added to every Power Roll on this wizard's first turn. */
+    var bonusDie: Int? = null
 
     /** Extra cards drawn after the starting hand this game (Pixie Paradise). */
     var extraStartingCards = 0

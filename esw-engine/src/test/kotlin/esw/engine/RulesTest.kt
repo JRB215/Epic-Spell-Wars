@@ -165,6 +165,33 @@ class RulesTest {
     }
 
     @Test
+    fun slagShangriLaDieIsRolledAtGameStartAndAddedOnlyOnTheFirstTurn() {
+        // Dice in order: the bonus die (4), then Mercy-Killing's single Power Roll die (3).
+        val game = Game(
+            catalog, listOf("Wizard 1", "Wizard 2"),
+            ScriptedDecisions(mapOf(0 to listOf("mercy-killing"), 1 to listOf("pam-and-hecubas"))),
+            ScriptedDice(listOf(4, 3)), Random(3),
+        ) { events.add(it) }
+        game.giveDeadWizard(game.players[0], "slag-shangri-la")
+        runBlocking { game.beginGameForTest() }
+        assertEquals(4, game.players[0].bonusDie)
+        assertEquals(null, game.players[1].bonusDie)
+        val bonusRoll = events.filterIsInstance<GameEvent.DiceRolled>().first { it.reason.startsWith("Slag Shangri-La") }
+        assertEquals(listOf(4), bonusRoll.dice)
+
+        game.giveToHand(game.players[0], "mercy-killing")
+        game.giveToHand(game.players[1], "pam-and-hecubas")
+        round(game)
+        // The 3 on the die plus the 4 on the character card makes 7: the middle band, 3 damage.
+        val power = events.filterIsInstance<GameEvent.DiceRolled>().first { it.reason == "Power Roll" }
+        assertEquals(listOf(3), power.dice)
+        assertEquals(7, power.total)
+        assertEquals(17, game.players[1].hp)
+        // Wizard 1 has now had their first turn, so the die is gone.
+        assertEquals(null, game.players[0].bonusDie)
+    }
+
+    @Test
     fun hitPointsNeverGoAboveTheMaximum() {
         val game = setup(mapOf(0 to listOf("king-oberons"), 1 to listOf("pam-and-hecubas")), dice = listOf(6, 1))
         game.giveDeadWizard(game.players[0], "the-big-house")

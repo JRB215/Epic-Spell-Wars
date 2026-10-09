@@ -108,7 +108,7 @@ class Game(
             p.acted = false
             p.actLast = false
             p.extraDiceThisRound = 0
-            p.firstTurnDie = false
+            p.bonusDie = null
             p.extraStartingCards = 0
             p.hp = catalog.startingHp
         }
@@ -116,14 +116,22 @@ class Game(
         // Dead Wizard cards collected last game give their bonuses now, then are discarded.
         val treasuresToGain = mutableMapOf<PlayerState, Int>()
         for (p in players) {
+            var slagDice = 0
             for (c in p.deadWizardCards) {
                 when (c.def.id) {
                     "giant-space-kingdom" -> p.hp += 2
                     "the-big-house" -> p.hp += 3
                     "afterlife-artifact" -> treasuresToGain.merge(p, 1, Int::plus)
-                    "slag-shangri-la" -> p.firstTurnDie = true
+                    "slag-shangri-la" -> slagDice++
                     "pixie-paradise" -> p.extraStartingCards += 2
                 }
+            }
+            if (slagDice > 0) {
+                // Slag Shangri-La: each card puts a die on the character card. They are rolled now, shown to
+                // everyone, and their total is added to each Power Roll made on this wizard's first turn.
+                val rolled = List(slagDice) { dice.d6() }
+                p.bonusDie = rolled.sum()
+                emit(GameEvent.DiceRolled(p.id, "Slag Shangri-La: bonus die for the first turn", rolled, rolled.sum()))
             }
             p.hp = minOf(p.hp, maxHp)
             deadDiscard.addAll(p.deadWizardCards); p.deadWizardCards.clear()
@@ -264,7 +272,7 @@ class Game(
         resolvePendingBacklash()
         discardSpell(p)
         p.acted = true
-        p.firstTurnDie = false
+        p.bonusDie = null // only the first turn gets it
     }
 
     private suspend fun revealSpell(p: PlayerState) {
@@ -582,7 +590,6 @@ class Game(
         if (rollType == CardType.QUALITY && p.has("skullzor-ring-of-power")) diceCount += 2
         if (p.has("slow-rollers-throne") && isLastToAct(p)) diceCount++
         if (p.has("desperation-stones") && p.hp <= 9) diceCount++
-        if (p.firstTurnDie) diceCount++
         diceCount = maxOf(diceCount, 1)
 
         var rolled = MutableList(diceCount) { dice.d6() }
@@ -613,6 +620,7 @@ class Game(
         if (p.has("big-book-of-awesomeness")) flat += 2
         if (p.has("lets-end-this")) flat += 2 * deadCount()
         if (p.has("lady-lucks-panties") && diceCount == 1) flat += 2
+        flat += p.bonusDie ?: 0 // Slag Shangri-La's die, kept on the character card for the first turn
         return flat
     }
 
