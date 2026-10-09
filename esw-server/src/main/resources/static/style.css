@@ -222,18 +222,19 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 /* ---------- overlays ---------- */
 #banner { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 50; background: rgba(0, 0, 0, .82); border: 3px solid var(--gold); border-radius: 12px; padding: 10px 26px; font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.6rem; color: var(--gold); pointer-events: none; animation: popin .25s; text-align: center; max-width: 90vw; }
 #banner.big { top: 38%; font-size: 3rem; padding: 18px 44px; }
-#dice { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 60; background: rgba(10, 6, 16, .94); border: 3px solid var(--gold); border-radius: 16px; padding: 16px 34px 18px; text-align: center; pointer-events: none; animation: popin .2s; min-width: 260px; }
-#dice .who { color: var(--muted); margin-bottom: 4px; font-size: 1.05rem; }
-#dice .total { margin-top: 6px; font-family: Impact, sans-serif; font-size: 2.4rem; color: var(--gold); min-height: 2.8rem; }
-.dice3d { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; margin: 20px 0 14px; perspective: 700px; }
-.cube { width: 76px; height: 76px; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2, .9, .25, 1); }
+/* A compact strip that the script places just under the spell cards (see showDice). */
+#dice { position: fixed; left: 50%; top: 62%; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 18px; background: rgba(10, 6, 16, .94); border: 3px solid var(--gold); border-radius: 14px; padding: 2px 20px; pointer-events: none; animation: fadein .2s; }
+#dice .who { color: var(--muted); font-size: .95rem; max-width: 200px; line-height: 1.25; }
+#dice .total { font-family: Impact, sans-serif; font-size: 2rem; color: var(--gold); min-width: 5.5rem; }
+.dice3d { display: flex; gap: 22px; justify-content: center; margin: 6px 6px; perspective: 600px; }
+.cube { width: 52px; height: 52px; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.2, .9, .25, 1); }
 .cube.rolling { animation: cubeSpin .55s linear infinite; }
-.face { position: absolute; inset: 0; background: #fbfbf4; border: 3px solid #111; border-radius: 13px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 9px; backface-visibility: hidden; }
+.face { position: absolute; inset: 0; background: #fbfbf4; border: 2px solid #111; border-radius: 10px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 6px; backface-visibility: hidden; }
 .face i { border-radius: 50%; background: #111; margin: 12%; }
 .face.f1 i { background: var(--red); }
-.face.f1 { transform: translateZ(38px); } .face.f6 { transform: rotateY(180deg) translateZ(38px); }
-.face.f3 { transform: rotateY(90deg) translateZ(38px); } .face.f4 { transform: rotateY(-90deg) translateZ(38px); }
-.face.f2 { transform: rotateX(90deg) translateZ(38px); } .face.f5 { transform: rotateX(-90deg) translateZ(38px); }
+.face.f1 { transform: translateZ(26px); } .face.f6 { transform: rotateY(180deg) translateZ(26px); }
+.face.f3 { transform: rotateY(90deg) translateZ(26px); } .face.f4 { transform: rotateY(-90deg) translateZ(26px); }
+.face.f2 { transform: rotateX(90deg) translateZ(26px); } .face.f5 { transform: rotateX(-90deg) translateZ(26px); }
 #spotlight { position: fixed; inset: 0; z-index: 55; background: rgba(8, 4, 14, .8); display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; pointer-events: none; animation: fadein .25s; }
 #tip { position: fixed; z-index: 90; width: 360px; background: #1c1428; border: 3px solid var(--gold); border-radius: 12px; padding: 12px 14px 10px; box-shadow: 0 10px 32px rgba(0, 0, 0, .8); pointer-events: none; font-size: 1rem; line-height: 1.35; }
 #tip .tt-head { border-bottom: 3px solid; padding-bottom: 6px; margin-bottom: 8px; }

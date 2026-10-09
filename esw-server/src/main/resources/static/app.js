@@ -238,11 +238,26 @@ const face = (n) => `<div class="face f${n}">${PIPS[n].map(([r, c]) => `<i style
 const cubeHtml = () => `<div class="cube rolling" style="animation-duration:${0.45 + Math.random() * 0.25}s">${[1, 2, 3, 4, 5, 6].map(face).join('')}</div>`;
 const FACE_TURN = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(-90deg)', 4: 'rotateY(90deg)', 2: 'rotateX(-90deg)', 5: 'rotateX(90deg)' };
 
+/** Puts the dice strip just under the spell cards, centred beneath them (or low in the middle if no spell is showing). */
+function placeDice(box) {
+  const cards = $('#fcards');
+  if (cards) {
+    const r = cards.getBoundingClientRect();
+    // Just under the cards (the cards box has about 20px of padding below them).
+    box.style.top = (r.bottom - 14) + 'px';
+    box.style.left = (r.left + r.width / 2) + 'px';
+  } else {
+    box.style.top = '38%';
+    box.style.left = '50%';
+  }
+}
+
 function showDice(e) {
   const box = $('#dice');
   box.className = '';
   box.innerHTML = `<div class="who">${esc(nameOf(e.player))} &mdash; ${esc(e.reason)}</div>
     <div class="dice3d">${e.dice.map(cubeHtml).join('')}</div><div class="total"></div>`;
+  placeDice(box);
   sound.dice();
   clearTimeout(showDice.settle);
   showDice.settle = setTimeout(() => {
