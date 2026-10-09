@@ -141,6 +141,8 @@ The rulebook and cards leave these open. The engine picks the simplest reading. 
 
 1. ~~Dead Wizard deck size~~ settled: base set only, 25 cards. The (c)2015 cards are in `Expansion 1`.
 2. ~~Hero cards~~ settled: all 8 Heroes play identically (20 HP, no abilities). They differ only in character art and name. Scans are needed for the art only.
-3. **Dead Wizard cards drawn mid-match:** the rulebook says each dead wizard draws one at the start of each new round. Confirm that they are *kept* until the end of the whole *game* (all rounds), not the round.
-4. **Deck reshuffling:** the rulebook says decks are shuffled only when they run out. Confirm the Main Deck's discard pile is reshuffled in that case.
-5. **Card text:** every card's effect must be read from the scans (about 120 unique cards) before the engine can be finished.
+3. ~~Dead Wizard cards drawn mid-match~~ confirmed by the owner (2026-10-09): they are kept until the start of the next game, then discarded.
+4. ~~Deck reshuffling~~ confirmed by the owner: a deck that runs out is reshuffled from its discard pile.
+5. ~~Card text~~ done: all base cards are read from the scans and checked twice.
+6. ~~Game and match~~ confirmed by the owner: a game is played in rounds until one wizard is left standing, who earns a token. The first wizard with two tokens wins the match.
+7. ~~Hero names~~ confirmed by the owner (all 16 read from the cards).
