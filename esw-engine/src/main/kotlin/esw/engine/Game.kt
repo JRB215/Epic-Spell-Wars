@@ -48,6 +48,11 @@ class Game(
 
     val maxHp: Int get() = catalog.maxHp
 
+    val mainDeckSize: Int get() = mainDeck.size
+    val mainDiscardSize: Int get() = mainDiscard.size
+    val treasureDeckSize: Int get() = treasureDeck.size
+    val deadWizardDeckSize: Int get() = deadDeck.size
+
     init {
         require(playerNames.size in 2..6) { "Epic Spell Wars is played by 2 to 6 wizards" }
         val heroes = catalog.heroes.shuffled(random)
@@ -165,6 +170,7 @@ class Game(
             }
         }
         for (p in players.filter { !it.alive }) drawDeadWizard(p)
+        emit(GameEvent.HandsDealt)
 
         val choices = coroutineScope {
             living.map { p ->
@@ -264,6 +270,7 @@ class Game(
     private suspend fun revealSpell(p: PlayerState) {
         val spell = p.spell!!
         val playedCards = spell.cards.size
+        spell.revealed = true
         emit(GameEvent.SpellRevealed(p.id, spell.cards.map { if (it.wild) "Wild Magic" else it.card.def.name }))
         replaceWildMagic(p)
         if (spell.usedWildMagic && p.has("jokers-wild-codpiece")) {
