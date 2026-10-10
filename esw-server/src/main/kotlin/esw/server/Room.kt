@@ -56,7 +56,13 @@ class Prompt(
     val botValue: Any,
     val parse: (JsonElement) -> Any?,
     val deferred: CompletableDeferred<Any> = CompletableDeferred(),
-)
+) {
+    /**
+     * For a spell: the choice the wizard has locked in. It is only handed to the game once every wizard has locked in,
+     * and until then the wizard can take it back (see [Room.unlock]).
+     */
+    @Volatile var held: Any? = null
+}
 
 /** Settings shared by every room. */
 class RoomServices(val catalog: CardCatalog, val leaderboard: Leaderboard, val pace: Double)
@@ -68,6 +74,12 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         private set
 
     private val prompts = ConcurrentHashMap<String, Prompt>()
+
+    /** Bots (and wizards a bot has taken over for) that have chosen their spell this round. */
+    private val botReady: MutableSet<Int> = ConcurrentHashMap.newKeySet()
+
+    /** True from the moment hands are dealt until every spell is locked in. */
+    @Volatile private var readyOpen = false
     private val lastStates = ConcurrentHashMap<Int, JsonObject>()
     private val log = CopyOnWriteArrayList<String>()
     @Volatile private var game: Game? = null
@@ -184,6 +196,14 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
 
     private fun onEvent(event: GameEvent, names: List<String>) {
         val engine = game ?: return
+        if (event is GameEvent.HandsDealt) {
+            botReady.clear()
+            readyOpen = true
+            broadcastReady()
+        } else if (event is GameEvent.SpellsLocked) {
+            readyOpen = false
+            broadcastReady()
+        }
         val text = describe(event, names)
         if (text.isNotEmpty()) {
             log.add(text)
@@ -205,6 +225,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.GameStarted -> 1500
         is GameEvent.RoundStarted -> 900
         is GameEvent.HandsDealt -> 0
+        is GameEvent.SpellFinished -> 0
         is GameEvent.SpellsLocked -> 4200
         is GameEvent.TurnStarted -> 1100
         is GameEvent.SpellRevealed -> 2800
@@ -232,6 +253,8 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         for (s in seats.filter { !it.bot && !it.connected }) removeSeat(s.index)
         state = RoomState.LOBBY
         game = null
+        readyOpen = false
+        botReady.clear()
         prompts.clear()
         lastStates.clear()
         seats.forEach { it.takeover = false; it.voteAsked = false; it.yesVotes.clear() }
@@ -253,7 +276,54 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         if (state == RoomState.LOBBY) return
         seat.send(obj("t" to "log", "lines" to log.toList()))
         lastStates[seat.index]?.let { seat.send(obj("t" to "state", "state" to it)) }
+        seat.send(readyMessage())
         for (p in prompts.values.filter { it.seat == seat.index }) seat.send(promptMessage(p))
+    }
+
+    // ------------------------------------------------------------------ who has locked in their spell
+
+    /** Everyone's state while spells are being built: ready, still choosing, or dead. */
+    private fun readyMessage(): JsonObject {
+        val engine = game
+        return obj(
+            "t" to "ready",
+            "open" to readyOpen,
+            "seats" to seats.map { s ->
+                val dead = engine?.players?.getOrNull(s.index)?.alive == false
+                val ready = if (s.bot || s.takeover) s.index in botReady
+                else prompts.values.any { it.kind == "spell" && it.seat == s.index && it.held != null }
+                mapOf("index" to s.index, "name" to s.name, "ready" to (dead || ready), "dead" to dead, "bot" to s.bot)
+            },
+        )
+    }
+
+    private fun broadcastReady() {
+        val message = readyMessage()
+        for (s in humans()) s.send(message)
+    }
+
+    /**
+     * Once every living human wizard has locked in, the held choices are handed to the game together. Until then a
+     * wizard can still take theirs back with [unlock].
+     */
+    private fun releaseSpellsIfReady() {
+        synchronized(this) {
+            val engine = game ?: return
+            val expected = engine.players.filter { it.alive }.map { it.id }.filter { !seats[it].bot && !seats[it].takeover }
+            val waiting = expected.map { id -> prompts.values.firstOrNull { it.kind == "spell" && it.seat == id } }
+            if (expected.isEmpty() || waiting.any { it == null || it.held == null }) return
+            for (p in waiting) p!!.deferred.complete(p.held!!)
+        }
+    }
+
+    /** A wizard takes their locked-in spell back to change it. Not possible once everyone has locked in. */
+    fun unlock(seat: Seat): String? {
+        val prompt = prompts.values.firstOrNull { it.kind == "spell" && it.seat == seat.index }
+            ?: return "Everyone has locked in, so it is too late to change your spell."
+        if (prompt.deferred.isCompleted) return "Everyone has locked in, so it is too late to change your spell."
+        prompt.held = null
+        broadcastReady()
+        return null
     }
 
     /** A player chose to walk away in the middle of a game: a bot plays their seat from now on. */
@@ -315,19 +385,40 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
 
     private fun startTakeover(seat: Seat) {
         seat.takeover = true
-        for (p in prompts.values.filter { it.seat == seat.index }) p.deferred.complete(p.botValue)
+        for (p in prompts.values.filter { it.seat == seat.index }) {
+            // A wizard who had already locked in a spell keeps it; otherwise the bot chooses.
+            p.deferred.complete(p.held ?: p.botValue)
+            if (p.kind == "spell") botReady.add(seat.index)
+        }
         broadcastRoom()
+        broadcastReady()
+        releaseSpellsIfReady()
     }
 
     // ------------------------------------------------------------------ prompts
 
-    private fun promptMessage(p: Prompt) = obj("t" to "prompt", "pid" to p.id, "kind" to p.kind, "data" to p.data)
+    private fun promptMessage(p: Prompt): JsonObject {
+        // A wizard who comes back (or refreshes) while their spell is locked in sees it locked.
+        val held = p.held as? SpellChoice
+        val data = if (held != null) {
+            p.data + ("lockedChoice" to mapOf("source" to held.source, "quality" to held.quality, "delivery" to held.delivery))
+        } else p.data
+        return obj("t" to "prompt", "pid" to p.id, "kind" to p.kind, "data" to data)
+    }
 
     /** Called with a human's answer. Returns an error message if the answer is not allowed. */
     fun answer(seat: Seat, pid: String, value: JsonElement): String? {
         val prompt = prompts[pid] ?: return "That question is no longer open."
         if (prompt.seat != seat.index) return "That question is not for you."
         val parsed = prompt.parse(value) ?: return "That is not a valid answer."
+        if (prompt.kind == "spell") {
+            // Locking in is not final: the choice is held until every wizard has locked in.
+            if (prompt.deferred.isCompleted) return "Everyone has already locked in."
+            prompt.held = parsed
+            broadcastReady()
+            releaseSpellsIfReady()
+            return null
+        }
         prompt.deferred.complete(parsed)
         return null
     }
@@ -343,6 +434,10 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
             if (seat.bot || seat.takeover) {
                 val pause = (450 * services.pace).toLong()
                 if (pause > 0) delay(pause)
+                if (kind == "spell") {
+                    botReady.add(player)
+                    broadcastReady()
+                }
                 return botValue
             }
             val prompt = Prompt(UUID.randomUUID().toString(), player, kind, data, botValue, parse)

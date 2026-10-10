@@ -56,6 +56,9 @@ let feed = [];            // plain-words narration of what is happening this tur
 let locked = [];          // the spells that were locked in this round: { player, components, initiative }
 let vote = null;
 let winnerName = null;
+let readyInfo = null;     // who has locked in their spell this round: { open, seats: [{ index, name, ready, dead, bot }] }
+let roundPlays = [];      // the spells cast so far this round: { player, cards }
+let prevRound = [];       // last round's spells, kept for reference until a new round has plays of its own
 const hpShown = {};       // the hit points last drawn on my board, so the skull can slide
 const cardCache = {};
 let muted = local.get('eswMute') === '1';
@@ -117,10 +120,11 @@ function handle(m) {
     case 'welcome': break;
     case 'lobby':
       lobby = m; room = null; game = null; prompt = null; vote = null; winnerName = null; focus = null; feed = [];
+      readyInfo = null; roundPlays = []; prevRound = [];
       screen = 'lobby'; render(); break;
     case 'room':
       room = m;
-      if (m.state === 'LOBBY') { screen = 'room'; game = null; prompt = null; logLines = []; winnerName = null; vote = null; focus = null; feed = []; }
+      if (m.state === 'LOBBY') { screen = 'room'; game = null; prompt = null; logLines = []; winnerName = null; vote = null; focus = null; feed = []; readyInfo = null; roundPlays = []; prevRound = []; }
       else screen = 'table';
       render(); break;
     case 'state': game = m.state; render(); break;
@@ -135,8 +139,14 @@ function handle(m) {
     case 'prompt':
       prompt = m;
       promptSent = false;
-      if (m.kind === 'spell') { build = { source: null, quality: null, delivery: null, target: null }; focus = null; }
+      if (m.kind === 'spell') {
+        build = { source: null, quality: null, delivery: null, target: null };
+        focus = null;
+        // Coming back (or refreshing) while the spell is locked in: show it locked again.
+        if (m.data.lockedChoice) { build = { ...m.data.lockedChoice, target: null }; promptSent = true; }
+      }
       render(); break;
+    case 'ready': readyInfo = m; render(); break;
     case 'promptDone':
       if (prompt && prompt.pid === m.pid) { prompt = null; promptSent = false; render(); }
       break;
@@ -184,8 +194,12 @@ function narration(e) {
 /** Updates what the screen is about to show. Runs before the table is drawn. */
 function preEvent(e) {
   switch (e.k) {
-    case 'roundStarted': focus = null; feed = []; locked = []; resolving = null; activePid = null; break;
-    case 'gameStarted': focus = null; feed = []; winnerName = null; break;
+    case 'roundStarted':
+      focus = null; feed = []; locked = []; resolving = null; activePid = null;
+      if (roundPlays.length) { prevRound = roundPlays; roundPlays = []; }
+      break;
+    case 'gameStarted': focus = null; feed = []; winnerName = null; roundPlays = []; prevRound = []; break;
+    case 'spellFinished': roundPlays.push({ player: e.player, cards: e.cards }); break;
     case 'spellsLocked': locked = e.spells; break;
     case 'turnStarted': focus = { player: e.player, animateFlip: false }; feed = []; resolving = null; activePid = e.player; break;
     case 'spellRevealed': if (focus) focus.animateFlip = true; break;
@@ -612,13 +626,60 @@ function chipsHtml(p) {
     + (p.deadCards ? `<span class="chip dead">${p.deadCards} dead wizard card${p.deadCards > 1 ? 's' : ''}</span>` : '');
 }
 
-function foeSeatHtml(p, pickable) {
+/** The log line with every card name turned into something you can hover to read the card. */
+function linkCards(line) {
+  const byName = new Map();
+  for (const c of Object.values(cardCache)) if (c.name && c.name.length > 2) byName.set(c.name, c);
+  if (!byName.size) return esc(line);
+  const pattern = [...byName.keys()].sort((a, b) => b.length - a.length).map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const re = new RegExp(pattern, 'g');
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(line)) !== null) {
+    out += esc(line.slice(last, m.index)) + `<span class="logcard" data-cid="${esc(byName.get(m[0]).id)}">${esc(m[0])}</span>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(line.slice(last));
+}
+
+/** Who has locked in their spell this round, shown in the top bar while spells are being built. */
+function readyHtml() {
+  if (!readyInfo || !readyInfo.open) return '';
+  const items = readyInfo.seats.map((s) => {
+    const cls = s.dead ? 'dead' : s.ready ? 'on' : 'wait';
+    const mark = s.dead ? '&#9760;' : s.ready ? '&#10003;' : '&hellip;';
+    const title = s.dead ? 'is dead' : s.ready ? 'has locked in a spell' : 'is still choosing';
+    return `<span class="rd ${cls}" title="${esc(s.name)} ${title}">${mark} ${esc(s.name)}</span>`;
+  }).join('');
+  return `<span class="readylist"><span class="rlab">Spells ready:</span>${items}</span>`;
+}
+
+/** The spells already cast this round (or last round, until this round has some), as small cards you can hover. */
+function recapHtml() {
+  const plays = roundPlays.length ? roundPlays : prevRound;
+  if (!plays.length) return '';
+  const title = roundPlays.length ? `Round ${game.round}: spells cast` : 'Last round';
+  const rows = plays.map((r) => {
+    const minis = r.cards.map((c) => {
+      cardCache[c.id] = c;
+      const img = c.art ? `<img src="${esc(c.art)}?w=120" alt="" onerror="this.remove()">` : '';
+      return `<span class="mc t-${c.type}" data-cid="${esc(c.id)}">${img}</span>`;
+    }).join('');
+    return `<div class="rrow"><span class="rwho">${esc(nameOf(r.player))}</span><span class="rminis">${minis}</span></div>`;
+  }).join('');
+  return `<div id="recap"><div class="rtitle">${esc(title)}</div>${rows}</div>`;
+}
+
+function foeSeatHtml(p, pickable, role) {
   const cls = ['fseat', p.alive ? '' : 'dead', activePid === p.id ? 'active' : '', pickable ? 'pickable' : ''].join(' ');
+  const sideLabel = { left: '&#9664; Your left', right: 'Your right &#9654;', both: '&#9664; Your left &amp; right &#9654;' }[role];
+  const sideTag = sideLabel ? `<div class="sidetag ${role}">${sideLabel}</div>` : '';
   const pct = Math.max(0, Math.round((p.hp / p.maxHp) * 100));
   const tags = `${p.bot ? 'bot' : ''}${!p.connected && !p.bot ? 'disconnected' : ''}${p.away ? ' (bot is playing)' : ''}`;
   const mini = p.spell ? p.spell.cards.map(() => `<i class="${p.spell.revealed ? 'up' : ''}"></i>`).join('') : '';
   return `<div class="${cls}" data-pid="${p.id}">
-    ${lwsHtml(p.tokens)}
+    ${sideTag}${lwsHtml(p.tokens)}
     <div class="top"><div class="pwrap"><img class="portrait" src="${esc(p.hero.art)}?w=200" alt="" onerror="this.style.visibility='hidden'"></div>
       <div class="who"><b>${esc(p.name)}</b><small>${esc(p.hero.name)}${p.hero.title ? ', ' + esc(p.hero.title) : ''}</small></div></div>
     <div class="hprow"><img class="sk" src="${PIECE('skull')}" alt="" onerror="this.style.display='none'">
@@ -727,16 +788,26 @@ function renderTable(app) {
   if (!game) { app.innerHTML = '<div class="center-box"><p class="muted">Setting up the table...</p></div>'; return; }
   const youIdx = game.you ? game.you.index : -1;
   const pickIds = prompt && prompt.kind === 'player' && !promptSent ? prompt.data.candidates : [];
-  const foes = game.players.filter((p) => p.id !== youIdx);
+  // The opponents run across the top from my left neighbour to my right neighbour, which is the same order the
+  // rules use ("the foe on your left" is the next living seat after me, "on your right" the one before me).
+  const total = game.players.length;
+  const foes = youIdx >= 0
+    ? Array.from({ length: total - 1 }, (_, i) => game.players[(youIdx + 1 + i) % total])
+    : game.players;
+  const livingFoes = foes.filter((p) => p.alive);
+  const leftId = livingFoes.length ? livingFoes[0].id : null;
+  const rightId = livingFoes.length ? livingFoes[livingFoes.length - 1].id : null;
+  const roleOf = (p) => (youIdx < 0 ? null : p.id === leftId && p.id === rightId ? 'both' : p.id === leftId ? 'left' : p.id === rightId ? 'right' : null);
   const me = game.players[youIdx];
   const choosing = prompt && prompt.kind === 'spell' && !promptSent;
   app.innerHTML = `<div class="table">
-    <div class="topbar"><b>EPIC SPELL WARS</b><span>Game ${game.game} &middot; Round ${game.round}</span><span class="spacer"></span>
+    <div class="topbar"><b>EPIC SPELL WARS</b><span>Game ${game.game} &middot; Round ${game.round}</span>${readyHtml()}<span class="spacer"></span>
       <small class="muted">${statusData ? 'build ' + esc(String(statusData.version).slice(0, 7)) : ''}</small>
       <button class="btn secondary" id="mute">${muted ? 'Sound off' : 'Sound on'}</button><button class="btn secondary" id="leave">Leave</button></div>
-    <div class="foes">${foes.map((p) => foeSeatHtml(p, pickIds.includes(p.id))).join('')}</div>
+    <div class="foes">${foes.map((p) => foeSeatHtml(p, pickIds.includes(p.id), roleOf(p))).join('')}</div>
     <div class="stage" id="stage">${stageHtml()}</div>
-    <div class="log" id="log">${logLines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>
+    <div class="log" id="log">${logLines.map((l) => `<div>${linkCards(l)}</div>`).join('')}</div>
+    ${recapHtml()}
     ${pilesHtml()}
     <div class="bottom">${me ? mineHtml(me, pickIds.includes(me.id)) : ''}<div class="hand ${choosing ? 'live' : ''} ${me && !me.alive ? 'deadhand' : ''}" id="hand">${handHtml()}</div></div></div>
     ${gameOverHtml()}`;
@@ -801,8 +872,16 @@ function promptHtml() {
   if (!prompt) return '';
   const d = prompt.data;
   if (prompt.kind === 'spell') {
-    if (promptSent) return '<div class="waiting">Spell sealed. Waiting for the other wizards...</div>';
     const all = [...d.hand, ...d.gems];
+    if (promptSent) {
+      // Locked in: keep the spell on screen, show who is still choosing, and allow taking it back.
+      const mine = ['source', 'quality', 'delivery'].map((k) => (build[k] != null ? all.find((x) => x.uid === build[k]) : null)).filter(Boolean);
+      const waiting = readyInfo && readyInfo.open ? readyInfo.seats.filter((s) => !s.ready).map((s) => s.name) : [];
+      return `<div class="prompt locked"><h3>Your spell is locked in</h3>
+        <div class="lockedcards">${mine.map((c) => cardHtml(c, '', 420)).join('')}</div>
+        <p class="muted" style="margin:6px 0">${waiting.length ? 'Waiting for ' + esc(waiting.join(', ')) + '...' : 'Everyone is ready.'}</p>
+        <button class="btn secondary" id="unlock">Take it back</button></div>`;
+    }
     const slotBox = (key, label) => {
       const uid = build[key];
       const c = uid != null ? all.find((x) => x.uid === uid) : null;
@@ -867,6 +946,8 @@ function wireTable() {
   document.querySelectorAll('[data-vote]').forEach((b) => {
     b.onclick = () => { send({ t: 'voteBot', seat: vote.seat, yes: b.dataset.vote === 'yes' }); vote = null; render(); };
   });
+  const unlock = $('#unlock');
+  if (unlock) unlock.onclick = () => { send({ t: 'unlock' }); promptSent = false; render(); };
   if (!prompt || promptSent) return;
 
   if (prompt.kind === 'spell') {

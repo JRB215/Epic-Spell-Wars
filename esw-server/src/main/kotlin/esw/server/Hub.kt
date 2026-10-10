@@ -131,6 +131,7 @@ class Hub(
                 val value = msg["value"] ?: JsonNull
                 if (pid != null) room.answer(seat, pid, value)?.let { error(client, it) }
             }
+            "unlock" -> if (room != null && seat != null) room.unlock(seat)?.let { error(client, it) }
             "voteBot" -> if (room != null && seat != null) {
                 val target = msg.int("seat")
                 if (target != null) room.vote(seat, target, msg.bool("yes") == true)

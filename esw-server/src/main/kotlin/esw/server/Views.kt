@@ -117,6 +117,7 @@ fun describe(e: GameEvent, names: List<String>): String = when (e) {
     }
     is GameEvent.TurnStarted -> "${name(names, e.player)} casts."
     is GameEvent.SpellRevealed -> "${name(names, e.player)} reveals ${e.cards.joinToString(", ").ifEmpty { "nothing" }}."
+    is GameEvent.SpellFinished -> "" // only used for the round recap
     is GameEvent.DeckRevealed -> "${name(names, e.player)}'s ${e.by} reveals " +
         e.cards.joinToString(", ") { it.def.name + if (it.kept) " (kept)" else "" } + "."
     is GameEvent.WildMagicResolved ->
@@ -151,6 +152,7 @@ private fun kind(e: GameEvent) = when (e) {
     is GameEvent.WildMagicResolved -> "wildMagic"
     is GameEvent.CardResolving -> "cardResolving"
     is GameEvent.DiceRolled -> "dice"
+    is GameEvent.SpellFinished -> "spellFinished"
     is GameEvent.DeckRevealed -> "deckRevealed"
     is GameEvent.RollOutcome -> "rollOutcome"
     is GameEvent.DamageDealt -> "damage"
@@ -175,6 +177,7 @@ fun eventView(e: GameEvent, names: List<String>): JsonObject {
         is GameEvent.DiceRolled -> {
             base["player"] = e.player; base["dice"] = e.dice; base["total"] = e.total; base["reason"] = e.reason
         }
+        is GameEvent.SpellFinished -> { base["player"] = e.player; base["cards"] = e.cards.map { cardView(it) } }
         is GameEvent.DeckRevealed -> {
             base["player"] = e.player; base["by"] = e.by
             base["cards"] = e.cards.map { mapOf("card" to cardView(it.def), "kept" to it.kept) }

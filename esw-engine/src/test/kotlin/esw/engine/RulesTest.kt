@@ -165,6 +165,31 @@ class RulesTest {
     }
 
     @Test
+    fun theFoeOnYourLeftIsTheNextSeatAndTheFoeOnYourRightIsThePreviousSeat() {
+        // Seat 0 casts Phantasmagoons (3 damage to the foe on your right on a roll of 5-9) at a three-seat table.
+        val game = setup(
+            mapOf(0 to listOf("phantasmagoons"), 1 to listOf("pam-and-hecubas"), 2 to listOf("pam-and-hecubas")),
+            dice = listOf(6),
+        )
+        round(game)
+        assertEquals(20, game.players[1].hp, "seat 1 is on seat 0's left, so it is not hit")
+        assertEquals(17, game.players[2].hp, "seat 2 is on seat 0's right")
+        // And from seat 2's point of view, seat 0 is on its left (the next seat wraps round).
+        val left = events.filterIsInstance<GameEvent.DamageDealt>().first().target
+        assertEquals(2, left)
+    }
+
+    @Test
+    fun eachFinishedSpellIsReportedWithItsFinalCardsInSpellOrder() {
+        val game = setup(mapOf(0 to listOf("fist-o-nature", "king-oberons"), 1 to listOf("pam-and-hecubas")), dice = listOf(6, 6, 6))
+        round(game)
+        val finished = events.filterIsInstance<GameEvent.SpellFinished>().associate { it.player to it.cards.map { c -> c.name } }
+        // Source before Delivery, whatever order they were chosen in.
+        assertEquals(listOf("King Oberon's", "Fist o' Nature"), finished[0])
+        assertEquals(listOf("Pam and Hecuba's"), finished[1])
+    }
+
+    @Test
     fun theAnnouncedTurnOrderListsWizardsInTheOrderTheyWillAct() {
         // p0: one card, Initiative 14. p1: one card, Initiative 2. p2: two cards. Impatient (p3) jumps the queue.
         val game = setup(mapOf(

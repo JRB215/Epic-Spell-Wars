@@ -7,6 +7,8 @@ data class RevealedCard(val def: CardDef, val kept: Boolean)
 
 /** Things that happened, in order. The server turns these into screen animations and a game log. */
 sealed interface GameEvent {
+    /** A wizard's turn is over: the cards their spell ended up with (including any added), kept for the round recap. */
+    data class SpellFinished(val player: Int, val cards: List<CardDef>) : GameEvent
     /** Cards were turned over from the top of the Main Deck by [by] (a card name), so everyone can see them. */
     data class DeckRevealed(val player: Int, val by: String, val cards: List<RevealedCard>) : GameEvent
     data class MatchStarted(val players: List<String>) : GameEvent

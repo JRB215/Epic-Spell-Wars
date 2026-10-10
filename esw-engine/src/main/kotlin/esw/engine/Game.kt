@@ -291,6 +291,9 @@ class Game(
             resolveSpell(p)
         }
         resolvePendingBacklash()
+        p.spell?.let { spell ->
+            emit(GameEvent.SpellFinished(p.id, spell.cards.sortedBy { it.slot.ordinal }.map { it.card.def }))
+        }
         discardSpell(p)
         p.acted = true
         p.bonusDie = null // only the first turn gets it

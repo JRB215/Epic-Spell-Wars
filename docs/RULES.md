@@ -105,6 +105,8 @@ The 18 player's spell: Source "Bleemax Brainiac's" reveals the top 2 cards of th
 The rulebook and cards leave these open. The engine picks the simplest reading. Tell the owner if one is wrong.
 
 **Seats and targets**
+- Seats are numbered clockwise. The wizard on your **left** is the next living seat after yours (seat + 1, wrapping round), and on your **right** the previous living one. Dead wizards are skipped, so "the foe on your left" can be further along than the seat next to you. The screen lists your opponents across the top from your left neighbour to your right neighbour, with "Your left" and "Your right" tags on the living ones those words refer to.
+- Locking in a spell is not final: it is held until every wizard has locked in and can be taken back until then. Once everyone is ready the spells are revealed together.
 - "Left" is the next living seat after you; "right" is the previous one. A foe is any living wizard other than you.
 - Strongest = most HP, weakest = fewest HP. A tie among foes is broken by the caster's choice.
 - Random foe: foes are lined up from the caster's left and share the numbers 1-6 equally (3 foes get two numbers each). If 6 does not divide evenly (4 or 5 foes), re-roll the leftover numbers.

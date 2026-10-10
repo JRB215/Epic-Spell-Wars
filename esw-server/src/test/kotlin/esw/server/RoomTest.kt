@@ -33,6 +33,77 @@ class RoomTest {
         }
     }
 
+    /** A browser connection that just records what the server sends it. */
+    private class FakeBrowser(name: String) {
+        val received = java.util.concurrent.CopyOnWriteArrayList<kotlinx.serialization.json.JsonObject>()
+        val session: org.springframework.web.socket.WebSocketSession = java.lang.reflect.Proxy.newProxyInstance(
+            FakeBrowser::class.java.classLoader, arrayOf(org.springframework.web.socket.WebSocketSession::class.java),
+        ) { _, method, args ->
+            when (method.name) {
+                "isOpen" -> true
+                "getId" -> name
+                "sendMessage" -> {
+                    val text = (args[0] as org.springframework.web.socket.TextMessage).payload
+                    parseMessage(text)?.let { received.add(it) }
+                    null
+                }
+                else -> null
+            }
+        } as org.springframework.web.socket.WebSocketSession
+
+        fun lastOfType(t: String) = received.lastOrNull { it.string("t") == t }
+        fun count(t: String) = received.count { it.string("t") == t }
+    }
+
+    private fun firstSpellPrompt(browser: FakeBrowser): Pair<String, kotlinx.serialization.json.JsonElement> {
+        val prompt = browser.received.first { it.string("t") == "prompt" && it.string("kind") == "spell" }
+        val hand = (prompt["data"] as kotlinx.serialization.json.JsonObject)["hand"] as kotlinx.serialization.json.JsonArray
+        val card = hand.map { it as kotlinx.serialization.json.JsonObject }.first { it.string("type") in setOf("SOURCE", "QUALITY", "DELIVERY") }
+        val slot = card.string("type")!!.lowercase()
+        return prompt.string("pid")!! to obj(slot to card.int("uid"))
+    }
+
+    @Test
+    fun lockedInSpellsAreHeldUntilEveryoneIsReadyAndCanBeTakenBack() {
+        val services = RoomServices(catalog, Leaderboard(null), pace = 0.0)
+        val room = Room("held", "Held spells", "a", services)
+        val ann = FakeBrowser("ann")
+        val bob = FakeBrowser("bob")
+        val annSeat = room.addHuman("a", "Ann", ann.session)!!
+        val bobSeat = room.addHuman("b", "Bob", bob.session)!!
+        room.addBot()
+        assertNull(room.start())
+        waitFor(10, "both humans to be asked for a spell") { ann.count("prompt") > 0 && bob.count("prompt") > 0 }
+
+        val (annPid, annSpell) = firstSpellPrompt(ann)
+        val (bobPid, bobSpell) = firstSpellPrompt(bob)
+
+        // Ann locks in. Bob has not, so nothing is released and Ann is shown as ready.
+        assertNull(room.answer(annSeat, annPid, annSpell))
+        Thread.sleep(300)
+        assertEquals(0, ann.count("promptDone"), "the game must not start while Bob is still choosing")
+        val ready = bob.lastOfType("ready")!!
+        val readyByName = (ready["seats"] as kotlinx.serialization.json.JsonArray).map { it as kotlinx.serialization.json.JsonObject }
+            .associate { it.string("name")!! to it.bool("ready") }
+        assertEquals(true, readyByName["Ann"])
+        assertEquals(false, readyByName["Bob"])
+
+        // Ann changes her mind and takes it back; she is no longer ready.
+        assertNull(room.unlock(annSeat))
+        val afterUnlock = (bob.lastOfType("ready")!!["seats"] as kotlinx.serialization.json.JsonArray)
+            .map { it as kotlinx.serialization.json.JsonObject }.first { it.string("name") == "Ann" }
+        assertEquals(false, afterUnlock.bool("ready"))
+
+        // Both lock in again: now the spells are released together.
+        assertNull(room.answer(bobSeat, bobPid, bobSpell))
+        Thread.sleep(200)
+        assertEquals(0, bob.count("promptDone"), "Bob alone is not enough")
+        assertNull(room.answer(annSeat, annPid, annSpell))
+        waitFor(10, "the game to start once everyone is ready") { ann.count("promptDone") > 0 && bob.count("promptDone") > 0 }
+        assertTrue(room.unlock(annSeat) != null, "it is too late to take a spell back once everyone is ready")
+        room.dispose()
+    }
+
     @Test
     fun roomRefusesTooManyOrTooFewPlayers() {
         val services = RoomServices(catalog, Leaderboard(null), pace = 0.0)
