@@ -233,8 +233,11 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .fhead { display: flex; align-items: center; gap: 12px; font-family: Impact, sans-serif; letter-spacing: .05em; font-size: 1.6rem; color: var(--gold); text-shadow: 2px 2px 0 #000; }
 .fhead img { width: 40px; height: 56px; object-fit: cover; border-radius: 5px; border: 2px solid #000; }
 .fhead small { font-family: "Trebuchet MS", sans-serif; letter-spacing: 0; font-size: .9rem; text-shadow: none; }
-.fcards { display: flex; gap: 24px; justify-content: center; align-items: center; padding: 14px 16px 8px; min-height: calc(var(--focus-w) * 1.4 + 24px); flex: 0 0 auto; }
-.fc { position: relative; width: var(--focus-w); aspect-ratio: 5 / 7; perspective: 1100px; transition: transform .35s, filter .35s; }
+.fcards { display: flex; gap: 20px; justify-content: center; align-items: center; padding: 14px 16px 8px; min-height: calc(var(--focus-w) * 1.4 + 24px); flex: 0 0 auto; }
+/* Cards shrink to share the row when a spell grows past three cards: --n is the card count, and 58cqw is the share of
+   the spell area (.fbody) given to the cards, the rest being the action feed beside them. At 70cqw even a seven-card
+   spell fits in one row, and up to four cards stay at their full size. */
+.fc { position: relative; width: min(var(--focus-w), calc((70cqw - (var(--n, 3) - 1) * 20px) / var(--n, 3))); aspect-ratio: 5 / 7; perspective: 1100px; transition: transform .35s, filter .35s; }
 .fc-in { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.3, .7, .3, 1); }
 .fc.flipped .fc-in { transform: rotateY(180deg); }
 .fc-back, .fc-front { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 9px; overflow: hidden; }
@@ -246,9 +249,10 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .fc.done { filter: brightness(.55); }
 .fc .badge { position: absolute; right: -8px; top: -10px; z-index: 5; width: 38px; height: 38px; border-radius: 50%; background: var(--green); color: #fff; border: 3px solid #000; display: none; place-items: center; font-weight: 900; font-size: 1.3rem; }
 .fc.done .badge { display: grid; }
-.fbody { display: flex; gap: 36px; align-items: center; justify-content: center; width: 100%; }
+.fbody { display: flex; gap: 36px; align-items: center; justify-content: center; width: 100%; container-type: inline-size; }
 /* The spell's name, above the cards; the word for the card going off is lit. */
 .spellname { font-family: Impact, "Arial Black", sans-serif; letter-spacing: .05em; font-size: 1.9rem; text-align: center; line-height: 1.15; min-height: 2.2rem; text-shadow: 2px 2px 0 #000; }
+.spellname.long { font-size: 1.35rem; min-height: 1.6rem; }
 .spellname .w { transition: color .3s, text-shadow .3s; }
 .spellname .w.wait { color: #6d6082; }
 .spellname .w.done { color: var(--ink); }

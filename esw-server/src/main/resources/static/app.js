@@ -744,7 +744,7 @@ function spellNameHtml(p, cards) {
   });
   if (!shown.some((sc) => sc.slot === 'SOURCE')) parts.unshift({ name: p.hero.name, cls: 'done' });
   if (!shown.some((sc) => sc.slot === 'DELIVERY')) parts.push({ name: MAGIC_WORDS[p.id % 3], cls: 'done' });
-  return `<div class="spellname">${parts.map((x) => `<span class="w ${x.cls}">${esc(x.name)}</span>`).join(' ')}</div>`;
+  return `<div class="spellname${parts.length >= 5 ? ' long' : ''}">${parts.map((x) => `<span class="w ${x.cls}">${esc(x.name)}</span>`).join(' ')}</div>`;
 }
 
 function ctextHtml() {
@@ -766,7 +766,7 @@ function focusHtml() {
   return `<div class="focus"><div class="fhead"><img src="${esc(p.hero.art)}?w=120" alt="" onerror="this.style.visibility='hidden'">
       <span>${esc(p.name)} casts!</span>${ini ? `<small>Initiative ${ini.initiative}</small>` : ''}</div>
     ${spellNameHtml(p, flipped ? cards : [])}
-    <div class="fbody"><div class="fcards" id="fcards">${cards.map((sc) => fcHtml(sc, flipped)).join('') || '<span class="muted">No cards played.</span>'}</div>
+    <div class="fbody"><div class="fcards" id="fcards" style="--n:${Math.max(cards.length, 1)}">${cards.map((sc) => fcHtml(sc, flipped)).join('') || '<span class="muted">No cards played.</span>'}</div>
     <div class="feed">${feed.slice(-4).map((f, i, arr) => `<div class="k-${f.k} ${i === arr.length - 1 && feed.length - 1 === last ? 'new' : ''}">${esc(f.text)}</div>`).join('')}</div></div>
     <div class="dicerow" id="dicerow"></div>
     ${ctextHtml()}</div>`;
