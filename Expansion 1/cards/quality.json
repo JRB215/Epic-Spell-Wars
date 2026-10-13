@@ -1,0 +1,148 @@
+{
+  "deck": "QUALITY",
+  "set": "expansion1",
+  "copiesEach": 2,
+  "note": "Text is copied from the owner's scans of Expansion 1 (the five cut-off cards were rescanned).",
+  "cards": [
+    {
+      "id": "sadistic",
+      "name": "Sadistic",
+      "glyph": "DARK",
+      "scan": "EX1_0048.png",
+      "text": "Deal 3 damage to your strongest foe. If they block with a Creature, gain 1 Blood."
+    },
+    {
+      "id": "auto-erotic",
+      "name": "Auto-Erotic",
+      "glyph": "DARK",
+      "scan": "EX1_0049.png",
+      "text": "Deal 1 damage to each foe. Pay 1 Blood: Choose a foe. They take damage equal to your Blood, and you take damage equal to their Blood."
+    },
+    {
+      "id": "grubdiddling",
+      "name": "Grubdiddling",
+      "glyph": "ARCANE",
+      "scan": "EX1_0050.png",
+      "text": "The foe on your left must give you an Arcane card from their hand OR give you one of their Treasures. Standee: Repeat the effect with the foe on your right."
+    },
+    {
+      "id": "attackalanche",
+      "name": "Attackalanche",
+      "glyph": "PRIMAL",
+      "scan": "EX1_0051.png",
+      "text": "Deal 1 damage to the foe on your right, 2 damage to the next foe on their right, 3 damage to the foe on their right, and so on, until you've damaged each foe once. Pay 2 Blood: Double the damage dealt."
+    },
+    {
+      "id": "inflamerating",
+      "name": "Inflamerating",
+      "glyph": "ELEMENTAL",
+      "scan": "EX1_0052.png",
+      "text": "The player with the Standee takes 4 damage. If no Living Wizard has the Standee all players take 4 damage. Pay 6 Blood: The player with the Standee takes 8 damage, and then the players to her left and right each take 4 damage."
+    },
+    {
+      "id": "in-graven",
+      "name": "In-Graven",
+      "glyph": "DARK",
+      "scan": "EX1_0053.png",
+      "text": "Discard any number of cards from your hand that are the same type (Source/Quality/Delivery). Deal damage equal to the number of cards you discarded to a foe of your choice. Pay 4 Blood: Double the amount of damage dealt."
+    },
+    {
+      "id": "low-balling",
+      "name": "Low-Balling",
+      "glyph": "ILLUSION",
+      "scan": "EX1_0054.png",
+      "text": "A foe of your choice who does not have a Treasure draws a Treasure. Then deal 2 damage to each foe with a Treasure."
+    },
+    {
+      "id": "burnzerking",
+      "name": "Burnzerking",
+      "glyph": "ELEMENTAL",
+      "scan": "EX1_0055.png",
+      "text": "A foe of your choice must reveal their hand, and then takes damage equal to twice the number of Creatures in their hand. Pay 3 Blood: Choose each foe instead."
+    },
+    {
+      "id": "gifty",
+      "name": "Gifty",
+      "glyph": "ILLUSION",
+      "scan": "EX1_0056.png",
+      "text": "Add a Delivery card from your hand to your spell. Pay 4 Blood: Reveal cards from the Main Deck until you reveal a Creature, and then add it to your spell."
+    },
+    {
+      "id": "woodstalky",
+      "name": "Woodstalky",
+      "glyph": "PRIMAL",
+      "scan": "EX1_0057.png",
+      "text": "Discard up to 3 non-Primal cards from your hand. Heal 1 HP for each card you discard."
+    },
+    {
+      "id": "nonchalant",
+      "name": "Nonchalant",
+      "glyph": "ARCANE",
+      "scan": "EX1_0058.png",
+      "text": "Roll one die and gain that much Blood. If you roll a 4 or less, your weakest foe heals that much HP."
+    },
+    {
+      "id": "mother-forking",
+      "name": "Mother-Forking",
+      "glyph": "ELEMENTAL",
+      "scan": "EX1_0059.png",
+      "text": "Take the Standee and give it to a foe who didn't already have it. Then deal 3 damage to that foe. Pay 3 Blood: Kill all of that foe's Creatures first."
+    },
+    {
+      "id": "greedy",
+      "name": "Greedy",
+      "glyph": "ARCANE",
+      "scan": "EX1_0060.png",
+      "text": "You draw two Treasures. Each foe who has not acted this round draws one Treasure. Pay 2 Blood: Each foe who has acted this round must destroy one of their Treasures."
+    },
+    {
+      "id": "pollinating",
+      "name": "Pollinating",
+      "glyph": "PRIMAL",
+      "scan": "EX1_0061.png",
+      "text": "Reveal cards from the Main Deck until you find a Creature, and then add it to your spell. Standee: Add two Creatures instead."
+    },
+    {
+      "id": "cashed-in",
+      "name": "Cashed-In",
+      "glyph": "ARCANE",
+      "scan": "EX1_0062.png",
+      "text": "Gain a Treasure, and each foe without a Treasure gains one. Pay 8 Blood: Then deal 2 damage to each foe for each Treasure in play."
+    },
+    {
+      "id": "harvesting",
+      "name": "Harvesting",
+      "glyph": "PRIMAL",
+      "scan": "EX1_0063.png",
+      "text": "Take the Standee and deal 1 damage to each foe for every Dead Wizard. If there are no Dead Wizards, gain 2 Blood."
+    },
+    {
+      "id": "clonelising",
+      "name": "Clonelising",
+      "glyph": "ILLUSION",
+      "scan": "EX1_0064.png",
+      "text": "Choose one: Either deal 2 damage to each foe with even HP, OR deal 3 damage to each foe with odd HP. Standee: Do both - even first, then odd."
+    },
+    {
+      "id": "even-steven",
+      "name": "Even-Steven",
+      "glyph": "ILLUSION",
+      "scan": "EX1_0065.png",
+      "text": "Roll two dice. Deal damage equal to the lowest result to a foe of your choice. Pay 2 Blood: Deal the other result to a different foe."
+    },
+    {
+      "id": "sparkling",
+      "name": "Sparkling",
+      "glyph": "ELEMENTAL",
+      "scan": "EX1_0066.png",
+      "text": "Deal one die of damage to a random foe. Standee: Then deal 2 damage to a different foe."
+    },
+    {
+      "id": "infernalucky",
+      "name": "Infernalucky",
+      "glyph": "DARK",
+      "scan": "EX1_0067.png",
+      "text": "Each foe must roll one die. The high roller(s) gains 1 Blood—and takes damage equal to their roll. Standee: Each other foe takes damage equal to their roll."
+    }
+  ]
+}

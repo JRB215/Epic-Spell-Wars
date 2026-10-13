@@ -76,7 +76,7 @@ Give this file to Claude Code at the start of the new project (or put it in the 
 
 ## Status and workflow notes
 
-- Expansion 1 is **paused** (owner's call, 2026-10-09): the owner still has to scan it and wants live testing of the base game first. Do not start it unprompted.
+- Expansion 1 is **built on branch `expansion-engine`, not yet published** (owner sent scans 2026-10-12; they always played merged). The lobby offers Base, Expansion 1 only, and Base + Expansion 1 (merged). Engine, all 60 spell cards, Treasures, server mode picker and Blood/Standee/Creature display are done and tested (random matches in every mode pass the card audit; one 3-player merged match was driven through the browser). Not yet seen: two humans, art for the expansion in a real assets folder (copy `Expansion 1/cards-upright/*` into the assets folder under `Expansion 1/`), per-card behavior beyond the few unit tests. `docs/RULES.md` and `docs/EXPANSION1.md` still need a final pass. Publish only when the owner says "build it".
 
 - Done and tested: card data, rules engine (300 random matches pass the card audit), server, browser screens, Docker image definition, CI workflows.
 - Not yet seen with real people: two or more humans at one table, the "bot takes over for a dropped player" vote, sounds (only the code was checked), and the Docker image (CI builds it; this PC has no Docker).

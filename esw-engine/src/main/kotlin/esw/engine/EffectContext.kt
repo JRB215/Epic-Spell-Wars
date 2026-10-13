@@ -1,4 +1,4 @@
-package esw.engine
+﻿package esw.engine
 
 import esw.model.CardDef
 import esw.model.CardType
@@ -8,6 +8,8 @@ import esw.model.Glyph
 internal enum class Target {
     STRONGEST, WEAKEST, CHOICE, LEFT, RIGHT, EACH_FOE, LEFT_AND_RIGHT, TWO_ON_LEFT,
     EACH_STRONGER, EACH_WITHOUT_TREASURES, SELF,
+    // Expansion 1
+    MOST_BLOOD, ALREADY_ACTED, HAS_STANDEE, NOT_STANDEE, MOST_CREATURES, MOST_TREASURE, NO_CREATURES,
 }
 
 /**
@@ -20,14 +22,74 @@ internal class EffectContext(
     val caster: PlayerState,
     val card: CardDef,
     val effectType: CardType,
+    /** The card in the spell that is resolving. Null when a card copies another card's text. */
+    val spellCard: SpellCard? = null,
 ) {
     val spell: Spell get() = caster.spell!!
 
     fun foes(): List<PlayerState> = g.foesOf(caster)
 
-    fun dmg(target: PlayerState, amount: Int) = g.damage(target, amount, caster)
+    /** Deals damage. Returns true if a Creature blocked it. Wolf Cookie adds 1 to damage a Creature deals to a foe. */
+    suspend fun dmg(target: PlayerState, amount: Int): Boolean {
+        val bonus = if (g.expansion && isCreatureRoll && amount > 0 && target !== caster && caster.has("wolf-cookie")) 1 else 0
+        return g.damage(target, amount + bonus, caster)
+    }
 
-    fun dmgAll(targets: List<PlayerState>, amount: Int) { for (t in targets) dmg(t, amount) }
+    suspend fun dmgAll(targets: List<PlayerState>, amount: Int) { for (t in targets) dmg(t, amount) }
+
+    // ---- Expansion 1 helpers ----
+
+    val standee: Boolean get() = g.hasStandee(caster)
+
+    /** Offers to pay [cost] Blood for [what]. True if paid. */
+    suspend fun pay(cost: Int, what: String): Boolean = g.payBlood(caster, cost, what)
+
+    /** "Pay X Blood": asks how much to pay (up to all the Blood held), takes it and returns X. */
+    suspend fun payX(what: String): Int {
+        if (!g.expansion || caster.blood <= 0) return 0
+        val options = (0..caster.blood).map { "$it" }
+        val x = chooseOption("Pay X Blood: $what. How much?", options)
+        if (x > 0) g.loseBlood(caster, x, what)
+        return x
+    }
+
+    fun gainBlood(amount: Int, reason: String) = g.gainBlood(caster, amount, reason)
+
+    fun stealBlood(victim: PlayerState, amount: Int) = g.stealBlood(caster, victim, amount)
+
+    fun creaturesInPlay(): Int = g.players.sumOf { it.creatures.size }
+
+    /** Reveals cards from the Main Deck until a Creature turns up, adds it to the spell and discards the rest. */
+    fun addRevealedCreature() {
+        val skipped = mutableListOf<CardInstance>()
+        var found: CardInstance? = null
+        while (true) {
+            val c = g.drawMain() ?: break
+            if (c.def.creature) { found = c; break } else skipped.add(c)
+        }
+        val shown = skipped.map { RevealedCard(it.def, false) } + listOfNotNull(found?.let { RevealedCard(it.def, true) })
+        if (shown.isNotEmpty()) g.emit(GameEvent.DeckRevealed(caster.id, card.name, shown))
+        g.discardAllToMain(skipped)
+        found?.let { g.addToSpell(caster, it) }
+    }
+
+    /** Double-Headed Ding-Donger: asked once per card, and the answer reverses every direction on it. */
+    private var flipAnswer: Boolean? = null
+
+    suspend fun flipped(): Boolean {
+        if (!g.expansion || !caster.has("double-headed-ding-donger")) return false
+        flipAnswer?.let { return it }
+        val answer = g.decisions.chooseYesNo(caster.id, "Double-Headed Ding-Donger: reverse the direction on ${card.name} (left becomes right)?")
+        flipAnswer = answer
+        return answer
+    }
+
+    suspend fun left(): PlayerState? = if (flipped()) g.rightOf(caster) else g.leftOf(caster)
+
+    suspend fun right(): PlayerState? = if (flipped()) g.leftOf(caster) else g.rightOf(caster)
+
+    /** Foes in the order the card goes round the table: starting at the left, or at the right when reversed. */
+    suspend fun foesFromLeft(): List<PlayerState> = if (flipped()) foes().reversed() else foes()
 
     fun heal(target: PlayerState, amount: Int) = g.heal(target, amount)
 
@@ -35,11 +97,19 @@ internal class EffectContext(
 
     fun glyphCount(glyph: Glyph): Int = g.glyphCount(caster, glyph)
 
-    fun gainTreasure(p: PlayerState) = g.gainTreasure(p)
+    suspend fun gainTreasure(p: PlayerState) = g.gainTreasure(p)
 
     fun roll(p: PlayerState, reason: String): Int = g.rollSingle(p, reason)
 
-    suspend fun powerRoll(): Int = g.powerRoll(caster, card.glyph ?: Glyph.ARCANE, effectType)
+    /** True when this Power Roll is a Creature's own (a Creature that copies nothing and is really in the spell). */
+    val isCreatureRoll: Boolean get() = card.creature && spellCard != null
+
+    suspend fun powerRoll(): Int = g.powerRoll(caster, card.glyph ?: Glyph.ARCANE, effectType, isCreatureRoll)
+
+    /** The Creature stays in play after this turn. A card that merely copies a Creature cannot keep. */
+    fun keepCreature() {
+        if (isCreatureRoll) spellCard!!.keep = true
+    }
 
     suspend fun choose(candidates: List<PlayerState>, reason: String): PlayerState = g.pickAmong(caster, candidates, reason)
 
@@ -78,15 +148,32 @@ internal class EffectContext(
             Target.STRONGEST -> listOfNotNull(strongestFoe())
             Target.WEAKEST -> listOfNotNull(weakestFoe())
             Target.CHOICE -> if (all.isEmpty()) emptyList() else listOf(choose(all, "foe to target"))
-            Target.LEFT -> listOfNotNull(g.leftOf(caster))
-            Target.RIGHT -> listOfNotNull(g.rightOf(caster))
+            Target.LEFT -> listOfNotNull(left())
+            Target.RIGHT -> listOfNotNull(right())
             Target.EACH_FOE -> all
             Target.LEFT_AND_RIGHT -> listOfNotNull(g.leftOf(caster), g.rightOf(caster)).distinct()
-            Target.TWO_ON_LEFT -> all.take(2)
+            Target.TWO_ON_LEFT -> foesFromLeft().take(2)
+            Target.MOST_BLOOD -> mostOf(all) { it.blood }
+            Target.MOST_CREATURES -> mostOf(all) { it.creatures.size }
+            Target.MOST_TREASURE -> mostOf(all) { it.treasures.size }
+            Target.ALREADY_ACTED -> pickOne(all.filter { g.hasActed(it) })
+            Target.HAS_STANDEE -> pickOne(all.filter { g.hasStandee(it) })
+            Target.NOT_STANDEE -> pickOne(all.filter { !g.hasStandee(it) })
+            Target.NO_CREATURES -> pickOne(all.filter { it.creatures.isEmpty() })
             Target.EACH_STRONGER -> all.filter { it.hp > caster.hp }
             Target.EACH_WITHOUT_TREASURES -> all.filter { it.treasures.isEmpty() }
             Target.SELF -> listOf(caster)
         }
+    }
+
+    private suspend fun pickOne(candidates: List<PlayerState>): List<PlayerState> =
+        if (candidates.isEmpty()) emptyList() else listOf(choose(candidates, "foe to target"))
+
+    /** The foe with the highest [score]; the caster breaks a tie. */
+    private suspend fun mostOf(all: List<PlayerState>, score: (PlayerState) -> Int): List<PlayerState> {
+        if (all.isEmpty()) return emptyList()
+        val top = all.maxOf(score)
+        return pickOne(all.filter { score(it) == top })
     }
 
     /** 1 for a roll of 1-4, 2 for 5-9, 3 for 10 or more. */
@@ -97,3 +184,4 @@ internal class EffectContext(
         CardEffects.run(EffectContext(g, caster, card, from.type), from.id)
     }
 }
+

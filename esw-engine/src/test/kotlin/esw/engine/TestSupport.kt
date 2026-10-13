@@ -13,6 +13,8 @@ class ScriptedDice(values: List<Int>, private val fallback: Random = Random(1)) 
 class ScriptedDecisions(
     private val spells: Map<Int, List<String>>,
     random: Random = Random(7),
+    /** What every yes/no question is answered with (paying Blood, blocking with a Creature, ...). */
+    private val yes: Boolean = false,
 ) : Decisions {
     private val bot = RandomDecisions(random)
 
@@ -37,5 +39,5 @@ class ScriptedDecisions(
     override suspend fun chooseTreasure(player: Int, candidates: List<CardInstance>, reason: String) = bot.chooseTreasure(player, candidates, reason)
     override suspend fun chooseCardFromHand(player: Int, candidates: List<CardInstance>, reason: String) = bot.chooseCardFromHand(player, candidates, reason)
     override suspend fun chooseOption(player: Int, prompt: String, options: List<String>) = bot.chooseOption(player, prompt, options)
-    override suspend fun chooseYesNo(player: Int, prompt: String) = false
+    override suspend fun chooseYesNo(player: Int, prompt: String) = yes
 }

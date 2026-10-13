@@ -16,6 +16,7 @@ private const val HAND_SIZE = 8
 private const val TOKENS_TO_WIN = 2
 private const val MAX_ROUNDS_PER_GAME = 300
 private const val MAX_GAMES_PER_MATCH = 60
+private const val MAX_BLOOD = 25
 
 /**
  * One match of Epic Spell Wars: games are played until a wizard has two Last Wizard Standing tokens.
@@ -48,6 +49,23 @@ class Game(
 
     val maxHp: Int get() = catalog.maxHp
 
+    /** True when the Expansion 1 rules (Blood, the Standee, Creatures, Reactions) are in play. */
+    val expansion: Boolean get() = catalog.mode.expansionRules
+
+    /** Who holds the Standee, or null while it sits in the middle of the table. A dead wizard can hold it. */
+    var standeeHolder: PlayerState? = null
+        private set
+
+    /** Most Wanted Poster: a Treasure lying in the middle of the table until someone slays a foe. */
+    var poster: CardInstance? = null
+        internal set
+
+    /** The first wizard slain this game (Classy in Repose asks about it). */
+    private var firstKilled: PlayerState? = null
+
+    /** Who won the Last Wizard Standing token last game (Lingering Curse targets them). */
+    private var lastGameWinner: PlayerState? = null
+
     /** The card on top of the discard pile, face up for everyone to see. */
     val mainDiscardTop: CardInstance? get() = mainDiscard.lastOrNull()
 
@@ -68,6 +86,55 @@ class Game(
     private fun newCard(def: CardDef) = CardInstance(nextUid++, def)
 
     internal fun emit(event: GameEvent) = sink(event)
+
+    // ------------------------------------------------------------------ Blood and the Standee (Expansion 1)
+
+    /** Adds Blood, up to 25. Does nothing in the base game. */
+    internal fun gainBlood(p: PlayerState, amount: Int, reason: String) {
+        if (!expansion || amount <= 0) return
+        val gained = minOf(amount, MAX_BLOOD - p.blood)
+        if (gained <= 0) return
+        p.blood += gained
+        emit(GameEvent.BloodChanged(p.id, gained, p.blood, reason))
+    }
+
+    /** Removes up to [amount] Blood and returns how much was actually taken. */
+    internal fun loseBlood(p: PlayerState, amount: Int, reason: String): Int {
+        val lost = minOf(amount, p.blood)
+        if (lost <= 0) return 0
+        p.blood -= lost
+        emit(GameEvent.BloodChanged(p.id, -lost, p.blood, reason))
+        return lost
+    }
+
+    internal fun stealBlood(thief: PlayerState, victim: PlayerState, amount: Int) {
+        val taken = loseBlood(victim, amount, "stolen by ${thief.name}")
+        gainBlood(thief, taken, "stolen from ${victim.name}")
+    }
+
+    /** Asks the wizard whether to pay [cost] Blood for [what]. Returns true if they paid. Free of cost when it cannot be paid. */
+    internal suspend fun payBlood(p: PlayerState, cost: Int, what: String): Boolean {
+        if (!expansion || cost <= 0 || p.blood < cost) return false
+        if (!decisions.chooseYesNo(p.id, "Pay $cost Blood: $what?")) return false
+        loseBlood(p, cost, what)
+        return true
+    }
+
+    /** A Blood payment on a Treasure: once per round, only on the owner's turn. */
+    internal suspend fun payForTreasure(p: PlayerState, treasure: CardInstance, cost: Int, what: String): Boolean {
+        if (!expansion || treasure.uid in p.paidThisRound || p.blood < cost) return false
+        if (!payBlood(p, cost, what)) return false
+        p.paidThisRound.add(treasure.uid)
+        return true
+    }
+
+    internal fun takeStandee(p: PlayerState) {
+        if (!expansion || standeeHolder === p) return
+        standeeHolder = p
+        emit(GameEvent.StandeeMoved(p.id))
+    }
+
+    internal fun hasStandee(p: PlayerState) = expansion && standeeHolder === p
 
     // ------------------------------------------------------------------ match / game / round
 
@@ -98,8 +165,30 @@ class Game(
             emit(GameEvent.Info("Nobody won game $gameNumber after $MAX_ROUNDS_PER_GAME rounds"))
         } catch (ended: GameEnded) {
             winner = ended.winner
+            // The round ends along with the game, so the Standee still pays out its Blood.
+            try { endOfRound() } catch (_: GameEnded) { /* nothing left to decide */ }
         }
         endGame(winner)
+    }
+
+    private var roundClosed = false
+
+    /** What happens when a round is over (Expansion 1 only). It runs once per round, even if the game ends first. */
+    private suspend fun endOfRound() {
+        if (!expansion || roundClosed) return
+        roundClosed = true
+        val living = players.filter { it.alive }
+        for (p in living) {
+            if (p.has("the-f-u-suit") && p.hp == living.minOf { it.hp }) {
+                heal(p, 2)
+                gainTreasure(p)
+            }
+        }
+        standeeHolder?.let { h ->
+            val gain = if (!h.alive && h.deadWizardCards.any { it.def.id == "grave-terrain" }) 4 else 1
+            gainBlood(h, gain, "holding the Standee")
+            if (h.has("idol-of-the-magic-pussy")) gainBlood(h, 1, "Idol of the Magic Pussy")
+        }
     }
 
     private suspend fun startGame() {
@@ -114,10 +203,16 @@ class Game(
             p.bonusDie = null
             p.extraStartingCards = 0
             p.hp = catalog.startingHp
+            p.prediction = null
+            p.zapThisGame = 0
+            p.startHandPenalty = 0
+            p.paidThisRound.clear()
+            p.rerolledCreatureThisTurn = false
         }
         pendingBacklash.clear()
         // Dead Wizard cards collected last game give their bonuses now, then are discarded.
         val treasuresToGain = mutableMapOf<PlayerState, Int>()
+        val petsToReveal = mutableListOf<PlayerState>()
         for (p in players) {
             var slagDice = 0
             for (c in p.deadWizardCards) {
@@ -127,7 +222,16 @@ class Game(
                     "afterlife-artifact" -> treasuresToGain.merge(p, 1, Int::plus)
                     "slag-shangri-la" -> slagDice++
                     "pixie-paradise" -> p.extraStartingCards += 2
+                    // Expansion 1 cards that work at the start of the next game
+                    "pet-from-beyond" -> petsToReveal.add(p)
+                    "hounds-from-hell" -> p.houndsDice++
+                    "zap-o-rama" -> p.zapThisGame++
+                    "lingering-curse" -> lastGameWinner?.let { it.startHandPenalty += 2 }
                 }
+            }
+            if (p.treasureNextGame > 0) {
+                treasuresToGain.merge(p, p.treasureNextGame, Int::plus)
+                p.treasureNextGame = 0
             }
             if (slagDice > 0) {
                 // Slag Shangri-La: each card puts a die on the character card. They are rolled now, shown to
@@ -140,9 +244,37 @@ class Game(
             deadDiscard.addAll(p.deadWizardCards); p.deadWizardCards.clear()
         }
         for ((p, n) in treasuresToGain) repeat(n) { gainTreasure(p) }
+        for (p in petsToReveal) startWithCreature(p)
+    }
+
+    /** Pet from Beyond: reveal cards until a Creature turns up, and the wizard starts the game with it in play. */
+    private fun startWithCreature(p: PlayerState) {
+        val aside = mutableListOf<CardInstance>()
+        var found: CardInstance? = null
+        while (true) {
+            val c = drawMain() ?: break
+            if (c.def.creature) { found = c; break } else aside.add(c)
+        }
+        mainDiscard.addAll(aside)
+        val shown = aside.map { RevealedCard(it.def, false) } + listOfNotNull(found?.let { RevealedCard(it.def, true) })
+        if (shown.isNotEmpty()) emit(GameEvent.DeckRevealed(p.id, "Pet from Beyond", shown))
+        found?.let {
+            p.creatures.add(it)
+            emit(GameEvent.CreatureKept(p.id, it.def.name))
+        }
     }
 
     private fun endGame(winner: PlayerState?) {
+        // Creatures and the Standee do not survive the game; Treasures lying in the middle go too.
+        for (p in players) {
+            for (c in p.creatures) { mainDiscard.add(c); emit(GameEvent.CreatureLost(p.id, c.def.name, "the game ended")) }
+            p.creatures.clear()
+            p.regalia?.let { mainDiscard.add(it); p.regalia = null }
+        }
+        poster?.let { treasureDiscard.add(it); poster = null }
+        if (standeeHolder != null) { standeeHolder = null; emit(GameEvent.StandeeMoved(null)) }
+        firstKilled = null
+        lastGameWinner = winner
         for (p in players) {
             discardSpell(p)
             p.spell = null
@@ -165,11 +297,13 @@ class Game(
 
     private suspend fun playRound() {
         emit(GameEvent.RoundStarted(roundNumber))
+        roundClosed = false
         for (p in players) {
             p.acted = false
             p.actLast = false
             p.extraDiceThisRound = 0
             p.spell = null
+            p.paidThisRound.clear()
         }
         val living = players.filter { it.alive }
         for (p in living) {
@@ -204,6 +338,7 @@ class Game(
         }
         // Normally the game ends mid-round. This is only reached if everyone left alive has acted.
         for (p in players) { discardSpell(p); p.spell = null }
+        endOfRound()
         if (players.count { it.alive } <= 1) throw GameEnded(players.firstOrNull { it.alive })
     }
 
@@ -247,7 +382,7 @@ class Game(
      */
     private fun turnOrderPreview(living: List<PlayerState>): List<LockedSpell> {
         data class Key(val last: Boolean, val impatient: Boolean, val components: Int, val initiative: Int)
-        fun key(p: PlayerState) = Key(p.actLast, isImpatient(p), p.spell!!.cards.size, initiativeOf(p))
+        fun key(p: PlayerState) = Key(p.actLast, isImpatient(p), p.spell!!.countedCards, initiativeOf(p))
         val sorted = living.sortedWith(
             compareBy<PlayerState>({ key(it).last }, { if (key(it).impatient) 0 else 1 }, { key(it).components }, { -key(it).initiative }),
         )
@@ -265,10 +400,18 @@ class Game(
         val waiting = players.filter { it.alive && !it.acted && it.spell != null }
         if (waiting.isEmpty()) return null
         val pool = waiting.filter { !it.actLast }.ifEmpty { waiting }
-        val order = compareBy<PlayerState>({ if (isImpatient(it)) 0 else 1 }, { it.spell!!.cards.size }, { -initiativeOf(it) })
+        val order = compareBy<PlayerState>({ if (isImpatient(it)) 0 else 1 }, { it.spell!!.countedCards }, { -initiativeOf(it) })
         val best = pool.sortedWith(order).first()
         val tied = pool.filter { order.compare(it, best) == 0 }
-        return if (tied.size == 1) best else rollOff(tied)
+        if (tied.size == 1) return best
+        if (expansion) {
+            // Grabbel-Snak's 6-Headed Tape Worm: pay 1 Blood to break the tie and go first.
+            for (holder in tied.filter { it.has("grabbel-snaks-6-headed-tape-worm") }) {
+                val worm = holder.treasures.first { it.def.id == "grabbel-snaks-6-headed-tape-worm" }
+                if (payForTreasure(holder, worm, 1, "win the tie and resolve first (Grabbel-Snak's Tape Worm)")) return holder
+            }
+        }
+        return rollOff(tied)
     }
 
     private fun rollOff(tied: List<PlayerState>): PlayerState {
@@ -285,26 +428,111 @@ class Game(
     private suspend fun takeTurn(p: PlayerState) {
         activeCaster = p
         emit(GameEvent.TurnStarted(p.id))
+        p.rerolledCreatureThisTurn = false
+        p.creatureDiceThisTurn = 0
+        if (expansion) startOfTurnTreasures(p)
         if (p.has("plink-cannon")) leftOf(p)?.let { damage(it, 1, p) }
         if (p.alive) {
             revealSpell(p)
             resolveSpell(p)
         }
         resolvePendingBacklash()
+        if (expansion && p.alive) endOfTurnTreasures(p)
         p.spell?.let { spell ->
             emit(GameEvent.SpellFinished(p.id, spell.cards.sortedBy { it.slot.ordinal }.map { it.card.def }))
         }
-        discardSpell(p)
+        finishSpell(p)
+        val lastToAct = isLastToAct(p)
         p.acted = true
         p.bonusDie = null // only the first turn gets it
+        if (expansion && p.alive && lastToAct && p.has("the-golden-handcuffs")) gainTreasure(p)
+    }
+
+    /** Expansion 1 Treasures that act at the start of their owner's turn, including the "Pay Blood:" powers. */
+    private suspend fun startOfTurnTreasures(p: PlayerState) {
+        if (p.has("cod-piece-of-cthulhu")) {
+            val victims = foesOf(p).filter { it.blood > 0 }
+            if (victims.isNotEmpty()) stealBlood(p, pickAmong(p, victims, "foe to steal 1 Blood from (Cod Piece of Cthulhu)"), 1)
+        }
+        if (p.has("fish-hands") && players.none { it.acted }) {
+            val owners = foesOf(p).filter { it.treasures.isNotEmpty() }
+            if (owners.isNotEmpty()) {
+                val victim = pickAmong(p, owners, "foe to swap a Treasure with (Fish Hands)")
+                val theirs = chooseTreasureOf(p, victim, "Treasure to take from ${victim.name}")
+                val mine = p.treasures.first { it.def.id == "fish-hands" }
+                if (theirs != null) {
+                    p.treasures.remove(mine); victim.treasures.remove(theirs)
+                    p.treasures.add(theirs); victim.treasures.add(mine)
+                    emit(GameEvent.Info("${p.name} swaps Fish Hands for ${theirs.def.name} from ${victim.name}"))
+                }
+            }
+        }
+        for (t in p.treasures.toList()) {
+            if (!p.alive) return
+            when (t.def.id) {
+                "snerds-rage" -> if (payForTreasure(p, t, 3, "Snerd's Rage: heal 2 HP")) heal(p, 2)
+                "first-loser-trophy" -> if (payForTreasure(p, t, 1, "First Loser Trophy: heal 1 HP")) heal(p, 1)
+                "monster-baby" -> if (foesOf(p).isNotEmpty() && payForTreasure(p, t, 4, "Monster Baby: 2 damage to a foe")) {
+                    damage(pickAmong(p, foesOf(p), "foe to take 2 damage"), 2, p)
+                }
+                "gang-bang-a-gong" -> if (foesOf(p).isNotEmpty() && payForTreasure(p, t, 2, "Gang Bang-A-Gong: damage a foe")) {
+                    val target = pickAmong(p, foesOf(p), "foe to hit with the Gong")
+                    damage(target, target.hp / 5, p)
+                }
+            }
+        }
+    }
+
+    private suspend fun endOfTurnTreasures(p: PlayerState) {
+        if (p.has("triple-barrel-shotgun")) {
+            val glyphs = Glyph.entries.sumOf { glyphCount(p, it) / 3 }
+            gainBlood(p, glyphs, "Triple-Barrel Shotgun")
+        }
+    }
+
+    /**
+     * Creatures that stayed in play come back into the spell to attack again. They are brought in as extra Delivery
+     * components, so the owner chooses the order they resolve in, but they do not count toward how many cards the spell
+     * has (a kept Creature never slows down your turn).
+     */
+    private fun bringBackCreatures(p: PlayerState) {
+        if (!expansion) return
+        val spell = p.spell ?: return
+        for (c in p.creatures) {
+            spell.cards.add(SpellCard(c, CardType.DELIVERY, wild = false).also { it.fromPlay = true })
+            emit(GameEvent.CardAddedToSpell(p.id, c.def.name))
+        }
+    }
+
+    /** The turn is over: discard the spell, except for Creatures that earned a KEEP, which stay in play. */
+    private fun finishSpell(p: PlayerState) {
+        val spell = p.spell ?: return
+        if (!expansion) { discardSpell(p); return }
+        for (sc in spell.cards) {
+            val creature = sc.card.def.creature
+            when {
+                creature && sc.keep && p.alive -> {
+                    if (!sc.fromPlay) { p.creatures.add(sc.card); emit(GameEvent.CreatureKept(p.id, sc.card.def.name)) }
+                }
+                sc.fromPlay -> {
+                    if (p.creatures.remove(sc.card)) {
+                        mainDiscard.add(sc.card)
+                        emit(GameEvent.CreatureLost(p.id, sc.card.def.name, "it did not roll KEEP"))
+                    }
+                }
+                !(sc.protonGem && sc.wild) -> mainDiscard.add(sc.card)
+            }
+        }
+        spell.cards.clear()
     }
 
     private suspend fun revealSpell(p: PlayerState) {
         val spell = p.spell!!
-        val playedCards = spell.cards.size
+        val playedCards = spell.countedCards
         spell.revealed = true
         emit(GameEvent.SpellRevealed(p.id, spell.cards.map { if (it.wild) "Wild Magic" else it.card.def.name }))
         replaceWildMagic(p)
+        bringBackCreatures(p)
         if (spell.usedWildMagic && p.has("jokers-wild-codpiece")) {
             heal(p, 2)
             gainTreasure(p)
@@ -346,6 +574,21 @@ class Game(
                 sc.card = found
                 sc.wild = false
             }
+            // Dr. Shrinky's Couch: keep looking for a second card of the type and add that one to the spell as well.
+            if (expansion && found != null && p.has("dr-shrinkys-couch")) {
+                var second: CardInstance? = null
+                val skipped = mutableListOf<CardInstance>()
+                while (true) {
+                    val c = drawMain() ?: break
+                    if (c.def.type == sc.slot) { second = c; break } else skipped.add(c)
+                }
+                mainDiscard.addAll(skipped)
+                if (second != null) {
+                    spell.cards.add(SpellCard(second, sc.slot, wild = false))
+                    emit(GameEvent.DeckRevealed(p.id, "Dr. Shrinky's Couch", listOf(RevealedCard(second.def, true))))
+                    emit(GameEvent.CardAddedToSpell(p.id, second.def.name))
+                }
+            }
             val shown = aside.map { RevealedCard(it.def, false) } + listOfNotNull(found?.let { RevealedCard(it.def, true) })
             if (shown.isNotEmpty()) emit(GameEvent.DeckRevealed(p.id, "Wild Magic", shown))
             emit(GameEvent.WildMagicResolved(p.id, sc.slot.name, found?.def?.name))
@@ -373,14 +616,20 @@ class Game(
                 for (holder in foesOf(p).filter { it.has("crown-of-the-meek") }) damage(p, 1, holder)
             }
             if (!p.alive) break
-            CardEffects.run(EffectContext(this, p, next.card.def, next.card.def.type), next.card.def.id)
+            CardEffects.run(EffectContext(this, p, next.card.def, next.card.def.type, next), next.card.def.id)
+            // Steer-Roids!: pay 3 Blood after a Creature resolves to KEEP it instead of discarding it.
+            if (expansion && next.card.def.creature && !next.keep && p.alive && p.has("steer-roids")) {
+                val treasure = p.treasures.first { it.def.id == "steer-roids" }
+                if (payForTreasure(p, treasure, 3, "keep ${next.card.def.name} (Steer-Roids!)")) next.keep = true
+            }
             resolvePendingBacklash()
         }
     }
 
+    /** Discards a spell that did not get to finish (a dead wizard's, or at the end of a game). Kept Creatures are not touched. */
     internal fun discardSpell(p: PlayerState) {
         val spell = p.spell ?: return
-        for (sc in spell.cards) if (!(sc.protonGem && sc.wild)) mainDiscard.add(sc.card)
+        for (sc in spell.cards) if (!sc.fromPlay && !(sc.protonGem && sc.wild)) mainDiscard.add(sc.card)
         spell.cards.clear()
     }
 
@@ -448,12 +697,55 @@ class Game(
 
     // ------------------------------------------------------------------ damage, healing, death
 
-    internal fun damage(target: PlayerState, amount: Int, source: PlayerState?) {
-        if (amount <= 0 || !target.alive) return
-        target.hp = maxOf(0, target.hp - amount)
+    /**
+     * A wizard takes damage. [source] is whoever caused it (null if nobody did). In Expansion 1 a face-up Creature can
+     * soak up damage from a foe, and a Reaction can save a wizard who would otherwise die.
+     */
+    internal suspend fun damage(target: PlayerState, amount: Int, source: PlayerState?): Boolean {
+        if (amount <= 0 || !target.alive) return false
+        if (expansion && source != null && source !== target && target.creatures.isNotEmpty() &&
+            offerBlock(target, source, amount)
+        ) return true
+        val before = target.hp
+        target.hp = maxOf(0, before - amount)
         emit(GameEvent.DamageDealt(target.id, amount, source?.id, target.hp))
-        if (target.hp == 0) die(target)
+        if (target.hp == 0 && !(expansion && reactToDeath(target, source, before))) slay(target, source)
         checkGameEnd()
+        return false
+    }
+
+    /** Offers the wizard the chance to discard one Creature to cancel this one hit. Returns true if they did. */
+    private suspend fun offerBlock(target: PlayerState, source: PlayerState, amount: Int): Boolean {
+        if (!decisions.chooseYesNo(target.id, "Discard a Creature to cancel $amount damage from ${source.name}?")) return false
+        val creature = if (target.creatures.size == 1) {
+            target.creatures.first()
+        } else {
+            val uid = decisions.chooseTreasure(target.id, target.creatures.toList(), "Creature to discard")
+            target.creatures.firstOrNull { it.uid == uid } ?: error("Invalid Creature choice $uid")
+        }
+        discardCreature(target, creature, "blocked $amount damage")
+        emit(GameEvent.CreatureBlocked(target.id, creature.def.name, amount, source.id))
+        return true
+    }
+
+    /** Takes a Creature out of play and into the discard pile. */
+    internal fun discardCreature(p: PlayerState, creature: CardInstance, why: String) {
+        if (!p.creatures.remove(creature)) return
+        // If it is also sitting in the owner's spell (waiting to attack again), it leaves the spell too.
+        p.spell?.cards?.removeAll { it.fromPlay && it.card === creature }
+        mainDiscard.add(creature)
+        emit(GameEvent.CreatureLost(p.id, creature.def.name, why))
+    }
+
+    /** A Reaction in the dying wizard's unresolved spell goes off. Returns true if one saved them from dying. */
+    private suspend fun reactToDeath(p: PlayerState, killer: PlayerState?, hpBefore: Int): Boolean {
+        val spell = p.spell ?: return false
+        for (sc in spell.cards.toList()) {
+            if (sc.resolved || sc.wild || !sc.card.def.text.contains("Reaction:")) continue
+            emit(GameEvent.ReactionTriggered(p.id, sc.card.def.name))
+            if (ExpansionEffects.reaction(ReactionContext(this, p, killer, sc, hpBefore), sc.card.def.id)) return true
+        }
+        return false
     }
 
     internal fun heal(target: PlayerState, amount: Int) {
@@ -464,10 +756,35 @@ class Game(
         emit(GameEvent.Healed(target.id, healed, target.hp))
     }
 
-    private fun die(p: PlayerState) {
+    /** A wizard dies. [killer] is the wizard whose damage did it (the wizard themselves if they hurt themselves). */
+    private suspend fun slay(p: PlayerState, killer: PlayerState?) {
+        if (expansion) {
+            if (p.has("first-loser-trophy") && livingCount() - 1 <= 1) gainBlood(p, 3, "First Loser Trophy")
+            // Fate Coins: anyone who named this wizard as the next to be slain was right.
+            for (holder in players) {
+                val guess = holder.prediction ?: continue
+                if (holder.has("fate-coins") && guess == p.id) gainBlood(holder, 2, "Fate Coins guessed right")
+                holder.prediction = null
+            }
+            if (firstKilled == null) firstKilled = p
+        }
         p.alive = false
+        if (expansion && killer != null && killer !== p) {
+            gainBlood(killer, 3, "slaying ${p.name}")
+            if (killer.has("the-naughty-list")) gainBlood(killer, 1, "The Naughty List")
+            if (standeeHolder === p) takeStandee(killer)
+            poster?.let {
+                treasureDiscard.add(it)
+                poster = null
+                emit(GameEvent.Info("${killer.name} collects the Most Wanted Poster and gains 3 Blood"))
+                gainBlood(killer, 3, "Most Wanted Poster")
+            }
+        }
         mainDiscard.addAll(p.hand); p.hand.clear()
         treasureDiscard.addAll(p.treasures); p.treasures.clear()
+        p.regalia?.let { mainDiscard.add(it); p.regalia = null }
+        p.spell?.cards?.removeAll { it.fromPlay }
+        for (c in p.creatures.toList()) discardCreature(p, c, "its owner died")
         emit(GameEvent.PlayerDied(p.id))
         drawDeadWizardQuietly(p)
     }
@@ -489,11 +806,17 @@ class Game(
 
     internal fun discardToMain(card: CardInstance) { mainDiscard.add(card) }
 
+    internal fun discardAllToMain(cards: List<CardInstance>) { mainDiscard.addAll(cards) }
+
+    /** The dice behind the most recent Power Roll (Fart Knight resolves them one by one). */
+    internal var lastPowerDice: List<Int> = emptyList()
+
     internal fun drawCards(p: PlayerState, count: Int) {
         repeat(count) { drawMain()?.let { p.hand.add(it) } }
     }
 
-    private fun handSizeOf(p: PlayerState) = HAND_SIZE + if (p.has("thinking-cap")) 1 else 0
+    private fun handSizeOf(p: PlayerState) =
+        HAND_SIZE + (if (p.has("thinking-cap")) 1 else 0) - (if (roundNumber == 1) p.startHandPenalty else 0)
 
     private fun drawUpToHandSize(p: PlayerState) {
         while (p.hand.size < handSizeOf(p)) p.hand.add(drawMain() ?: break)
@@ -506,19 +829,51 @@ class Game(
         return treasureDeck.removeFirstOrNull()
     }
 
-    internal fun gainTreasure(p: PlayerState) {
+    internal suspend fun gainTreasure(p: PlayerState) {
         if (!p.alive) return
         val card = drawTreasureCard() ?: return
         receiveTreasure(p, card, null)
     }
 
-    private fun receiveTreasure(p: PlayerState, card: CardInstance, from: Int?) {
+    private suspend fun receiveTreasure(p: PlayerState, card: CardInstance, from: Int?) {
+        if (expansion && card.def.id == "most-wanted-poster" && from == null) {
+            // It goes to the middle of the table instead, and the wizard draws another Treasure.
+            poster?.let { treasureDiscard.add(it) }
+            poster = card
+            emit(GameEvent.Info("${p.name} draws the Most Wanted Poster: it goes to the middle of the table"))
+            gainTreasure(p)
+            return
+        }
         p.treasures.add(card)
         emit(GameEvent.TreasureGained(p.id, card.def.name, from))
         if (card.def.id == "thinking-cap") drawCards(p, 1)
+        if (!expansion) return
+        when (card.def.id) {
+            "idol-of-the-magic-pussy" -> takeStandee(p)
+            "fate-coins" -> {
+                val named = decisions.choosePlayer(p.id, players.filter { it.alive }.map { it.id }, "the next wizard to be slain")
+                p.prediction = named
+                emit(GameEvent.Info("${p.name} names ${players[named].name} as the next to be slain"))
+            }
+            "gluttons-regalia" -> {
+                val options = p.hand.filter { it.def.type != CardType.WILD_MAGIC }
+                if (options.isNotEmpty()) {
+                    val uid = decisions.chooseCardFromHand(p.id, options, "card to slip under Glutton's Regalia")
+                    val chosen = options.firstOrNull { it.uid == uid } ?: error("Invalid card choice $uid")
+                    p.hand.remove(chosen)
+                    p.regalia?.let { mainDiscard.add(it) }
+                    p.regalia = chosen
+                }
+            }
+            "monster-baby" -> {
+                for (w in players.filter { it.alive }) damage(w, 1, p)
+                val weak = players.count { it.alive && it.hp <= 5 }
+                gainBlood(p, 2 * weak, "Monster Baby")
+            }
+        }
     }
 
-    internal fun stealTreasure(thief: PlayerState, victim: PlayerState, card: CardInstance) {
+    internal suspend fun stealTreasure(thief: PlayerState, victim: PlayerState, card: CardInstance) {
         if (!victim.treasures.remove(card)) return
         emit(GameEvent.TreasureLost(victim.id, card.def.name, destroyed = false))
         if (thief.alive) receiveTreasure(thief, card, victim.id) else treasureDiscard.add(card)
@@ -557,7 +912,7 @@ class Game(
     }
 
     /** Used by dying wizards and by Midnight Merlin's. Backlash from Beyond hits at once. */
-    internal fun drawDeadWizardQuietly(p: PlayerState) {
+    internal suspend fun drawDeadWizardQuietly(p: PlayerState) {
         val card = drawDeadWizardCard() ?: return
         emit(GameEvent.DeadWizardDrawn(p.id, card.def.name))
         if (card.def.id == "backlash-from-beyond") {
@@ -565,6 +920,27 @@ class Game(
             pendingBacklash.add(p)
         } else {
             p.deadWizardCards.add(card)
+            if (expansion && card.def.resolveNow) resolveDeadWizardNow(p, card)
+        }
+        // The I Can't Believe This Shit: whenever a foe draws a Dead Wizard card, roll a die; 5 or 6 heals 1 HP.
+        if (expansion) for (holder in players.filter { it.alive && it !== p && it.has("the-i-cant-believe-this-shit") }) {
+            if (rollSingle(holder, "The I Can't Believe This Shit") >= 5) heal(holder, 1)
+        }
+    }
+
+    /** Expansion 1 Dead Wizard cards that say "Resolve now" take effect the moment they are drawn. */
+    private fun resolveDeadWizardNow(p: PlayerState, card: CardInstance) {
+        when (card.def.id) {
+            "ex-exsanguination" -> for (w in players.filter { it.alive && it !== p }) stealBlood(p, w, 1)
+            "grave-terrain" -> takeStandee(p)
+            "classy-in-repose" -> {
+                gainBlood(p, 2, "Classy in Repose")
+                if (firstKilled === p) gainBlood(p, 2, "Classy in Repose (first to die)")
+            }
+            "just-rewards" -> {
+                gainBlood(p, players.sumOf { it.tokens }, "Just Rewards")
+                if (p.tokens == 0) p.treasureNextGame++
+            }
         }
     }
 
@@ -598,20 +974,17 @@ class Game(
 
     internal fun glyphCount(p: PlayerState, glyph: Glyph): Int {
         val inSpell = p.spell?.cards?.count { !it.wild && it.card.def.glyph == glyph } ?: 0
-        return inSpell + p.treasures.count { it.def.countsAsGlyph == glyph }
+        val regalia = if (p.regalia?.def?.glyph == glyph) 1 else 0 // Glutton's Regalia counts the card slipped under it
+        return inSpell + regalia + p.treasures.count { it.def.countsAsGlyph == glyph }
     }
 
-    internal fun distinctGlyphs(p: PlayerState): Int {
-        val seen = mutableSetOf<Glyph>()
-        p.spell?.cards?.forEach { if (!it.wild) it.card.def.glyph?.let(seen::add) }
-        p.treasures.forEach { it.def.countsAsGlyph?.let(seen::add) }
-        return seen.size
-    }
+    internal fun distinctGlyphs(p: PlayerState): Int = glyphsInSpell(p).size
 
     internal fun glyphsInSpell(p: PlayerState): Set<Glyph> {
         val seen = mutableSetOf<Glyph>()
         p.spell?.cards?.forEach { if (!it.wild) it.card.def.glyph?.let(seen::add) }
         p.treasures.forEach { it.def.countsAsGlyph?.let(seen::add) }
+        p.regalia?.def?.glyph?.let(seen::add)
         return seen
     }
 
@@ -619,20 +992,44 @@ class Game(
      * Power Roll: one die for each card in the spell with [glyph] (Treasures that count as that glyph included),
      * plus extra dice and flat bonuses from Treasures. [rollType] is the kind of card whose text is rolling.
      */
-    internal suspend fun powerRoll(p: PlayerState, glyph: Glyph, rollType: CardType): Int {
+    internal suspend fun powerRoll(p: PlayerState, glyph: Glyph, rollType: CardType, creatureRoll: Boolean = false): Int {
         var diceCount = glyphCount(p, glyph) + p.extraDiceThisRound
         if (rollType == CardType.DELIVERY && p.has("phister-cannon")) diceCount++
         if (rollType == CardType.QUALITY && p.has("skullzor-ring-of-power")) diceCount += 2
         if (p.has("slow-rollers-throne") && isLastToAct(p)) diceCount++
         if (p.has("desperation-stones") && p.hp <= 9) diceCount++
+        if (expansion && creatureRoll) {
+            // Hounds from Hell cards wait for a Creature's Power Roll and add a die to it; Shub-Niggurath adds dice too.
+            diceCount += p.houndsDice + p.creatureDiceThisTurn
+            p.houndsDice = 0
+        }
         diceCount = maxOf(diceCount, 1)
 
         var rolled = MutableList(diceCount) { dice.d6() }
+        if (expansion && p.has("cheaters-dice")) {
+            // Cheater's Dice: any 1 you roll is rolled again (once).
+            for (i in rolled.indices) if (rolled[i] == 1) rolled[i] = dice.d6()
+        }
         if (p.has("cheater-handbook")) {
             val options = rolled.map { "Reroll the $it" } + "Keep these dice"
             val pick = decisions.chooseOption(p.id, "Cheater's Handbook: reroll one die?", options)
             require(pick in options.indices) { "Invalid option $pick" }
             if (pick < rolled.size) rolled[pick] = dice.d6()
+        }
+        if (expansion && p.has("the-globe-of-sacrifice")) {
+            val globe = p.treasures.first { it.def.id == "the-globe-of-sacrifice" }
+            if (payForTreasure(p, globe, 2, "re-roll one die (The Globe of Sacrifice)")) {
+                val options = rolled.map { "Re-roll the $it" }
+                val pick = decisions.chooseOption(p.id, "Re-roll which die?", options)
+                require(pick in options.indices) { "Invalid option $pick" }
+                rolled[pick] = dice.d6()
+            }
+        }
+        if (expansion && creatureRoll && p.has("manuel-decryptozoic") && !p.rerolledCreatureThisTurn &&
+            decisions.chooseYesNo(p.id, "Reroll this Creature's Power roll? You must keep the new result (Manuel De'Cryptozoic).")
+        ) {
+            p.rerolledCreatureThisTurn = true
+            rolled = MutableList(diceCount) { dice.d6() }
         }
         var total = rolled.sum() + flatBonus(p, diceCount)
         if (p.has("lady-lucks-brassiere") &&
@@ -643,7 +1040,9 @@ class Game(
             total = rolled.sum() + flatBonus(p, diceCount)
             gainTreasure(p)
         }
+        lastPowerDice = rolled.toList()
         emit(GameEvent.DiceRolled(p.id, "Power Roll", rolled.toList(), total))
+        if (expansion && total >= 13 && p.has("the-sausage-masters-steed")) gainBlood(p, 1, "The Sausage Master's Steed")
         if (p.has("amulet-of-maneg")) heal(p, rolled.count { it == 6 })
         if (total <= 4) for (h in foesOf(p).filter { it.has("fools-gold") }) heal(h, 2)
         return total
@@ -688,6 +1087,15 @@ class Game(
         return card
     }
 
+    internal fun giveStandeeForTest(p: PlayerState?) { standeeHolder = p }
+
+    /** Puts a brand-new Creature face up in front of a wizard. */
+    internal fun giveCreature(p: PlayerState, defId: String): CardInstance {
+        val card = newCard(catalog.allDefs.getValue(defId))
+        p.creatures.add(card)
+        return card
+    }
+
     internal suspend fun resolveSpellForTest(p: PlayerState) = resolveSpell(p)
 
     internal suspend fun playRoundForTest(): RoundOutcome {
@@ -696,6 +1104,7 @@ class Game(
             playRound()
             RoundOutcome(false, null)
         } catch (ended: GameEnded) {
+            try { endOfRound() } catch (_: GameEnded) { /* nothing left to decide */ }
             endGame(ended.winner)
             RoundOutcome(true, ended.winner?.id)
         }
@@ -709,8 +1118,9 @@ class Game(
      */
     fun audit(): String? {
         val main = (mainDeck + mainDiscard + players.flatMap { it.hand + it.reservedWildMagic } +
-            players.flatMap { p -> p.spell?.cards?.filter { !(it.protonGem && it.wild) }?.map { it.card }.orEmpty() })
-        val treasures = treasureDeck + treasureDiscard + players.flatMap { it.treasures }
+            players.flatMap { p -> p.spell?.cards?.filter { !(it.protonGem && it.wild) && !it.fromPlay }?.map { it.card }.orEmpty() } +
+            players.flatMap { it.creatures } + players.mapNotNull { it.regalia })
+        val treasures = treasureDeck + treasureDiscard + players.flatMap { it.treasures } + listOfNotNull(poster)
         val dead = deadDeck + deadDiscard + players.flatMap { it.deadWizardCards }
         fun check(name: String, cards: List<CardInstance>, expected: Int): String? {
             if (cards.size != expected) return "$name has ${cards.size} cards, expected $expected"

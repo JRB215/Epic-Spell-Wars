@@ -1,16 +1,17 @@
 """Turn the raw card scans upright.
 
-Usage:  python tools/orient_scans.py
+Usage:  python tools/orient_scans.py            (the base game)
+        python tools/orient_scans.py "Expansion 1"
 
-Reads  Base/<Deck folder>/*.png   (raw scans, never modified)
-Writes Base/cards-upright/<Deck folder>/<same name>.jpg
-
-For an expansion, point REPO at that expansion's folder instead of Base.
+Reads  <set>/<Deck folder>/*.png   (raw scans, never modified)
+Writes <set>/cards-upright/<Deck folder>/<same name>.jpg
 
 Most scans are landscape images with the card lying on its side, so those get a
-quarter turn. Portrait scans were all upside down, so they get a half turn.
-Anything that still comes out wrong can be listed in EXTRA_TURN (degrees
-counter-clockwise, applied last).
+quarter turn. In the base game the portrait scans were all upside down, so they get
+a half turn. In Expansion 1 only three portrait scans were upside down (listed in
+EXPANSION_PORTRAIT_UPSIDE_DOWN); the other portrait scans, including the rescans,
+are already upright. Anything that still comes out wrong can be listed in
+EXTRA_TURN (degrees counter-clockwise, applied last).
 """
 import glob
 import os
@@ -18,9 +19,16 @@ import sys
 
 from PIL import Image
 
-REPO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Base")
-DECKS = ["Source", "Quality", "Delivery", "Graveyards", "Treasures", "Card Back and Wild Card",
-         "Character Sheets"]
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SET_NAME = sys.argv[1] if len(sys.argv) > 1 else "Base"
+REPO = os.path.join(ROOT, SET_NAME)
+DECKS_BY_SET = {
+    "Base": ["Source", "Quality", "Delivery", "Graveyards", "Treasures", "Card Back and Wild Card",
+             "Character Sheets"],
+    "Expansion 1": ["Source", "Quality", "Delivery", "Treasures", "Wild Magic", "Dead Wizard"],
+}
+DECKS = DECKS_BY_SET[SET_NAME]
+EXPANSION_PORTRAIT_UPSIDE_DOWN = {"0043", "0045", "0047"}
 
 # (deck, file number) -> extra counter-clockwise degrees to apply to the finished card.
 EXTRA_TURN = {}
@@ -57,8 +65,8 @@ def upright(path, deck):
         return im.rotate(turn % 360, expand=True) if turn % 360 else im
     if im.width > im.height:
         im = im.rotate(270, expand=True)  # card was lying on its side
-    else:
-        im = im.rotate(180, expand=True)  # portrait scans were all upside down
+    elif SET_NAME == "Base" or number in EXPANSION_PORTRAIT_UPSIDE_DOWN:
+        im = im.rotate(180, expand=True)  # these portrait scans were upside down
     extra = EXTRA_TURN.get((deck, number), 0)
     if extra:
         im = im.rotate(extra, expand=True)

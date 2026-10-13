@@ -9,6 +9,7 @@ import esw.engine.RandomDice
 import esw.engine.SpellChoice
 import esw.model.CardCatalog
 import esw.model.CardType
+import esw.model.GameMode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -65,11 +66,25 @@ class Prompt(
 }
 
 /** Settings shared by every room. */
-class RoomServices(val catalog: CardCatalog, val leaderboard: Leaderboard, val pace: Double)
+class RoomServices(val catalogs: Map<GameMode, CardCatalog>, val leaderboard: Leaderboard, val pace: Double) {
+    /** A server that only knows one set of cards (used by tests). */
+    constructor(catalog: CardCatalog, leaderboard: Leaderboard, pace: Double) : this(mapOf(catalog.mode to catalog), leaderboard, pace)
+}
 
 class Room(val id: String, var title: String, var ownerKey: String, private val services: RoomServices) {
     val seats = CopyOnWriteArrayList<Seat>()
     var maxPlayers = 6
+
+    /** Which cards and rules the table plays with. The owner picks it in the lobby. */
+    @Volatile var mode = GameMode.BASE
+        private set
+
+    @Synchronized
+    fun setMode(newMode: GameMode): Boolean {
+        if (state != RoomState.LOBBY || newMode !in services.catalogs) return false
+        mode = newMode
+        return true
+    }
     @Volatile var state = RoomState.LOBBY
         private set
 
@@ -135,6 +150,8 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         "title" to title,
         "state" to state,
         "max" to maxPlayers,
+        "mode" to mode.name,
+        "modes" to services.catalogs.keys.map { mapOf("id" to it.name, "label" to it.label) },
         "owner" to (forKey != null && forKey == ownerKey),
         "you" to seatOf(forKey ?: "")?.index,
         "seats" to seats.map {
@@ -148,7 +165,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
     }
 
     fun summary(): JsonObject = obj(
-        "id" to id, "title" to title, "state" to state, "max" to maxPlayers,
+        "id" to id, "title" to title, "state" to state, "max" to maxPlayers, "mode" to mode.label,
         "players" to seats.map { it.name }, "humans" to humans().size,
     )
 
@@ -163,7 +180,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         lastStates.clear()
         val random = Random(System.nanoTime())
         val names = seats.map { it.name }
-        val engine = Game(services.catalog, names, HumanDecisions(random), RandomDice(random), random) { event -> onEvent(event, names) }
+        val engine = Game(services.catalogs.getValue(mode), names, HumanDecisions(random), RandomDice(random), random) { event -> onEvent(event, names) }
         game = engine
         broadcastRoom()
         gameThread = thread(name = "game-$id", isDaemon = true) {
@@ -245,6 +262,12 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         is GameEvent.GameWon -> 3500
         is GameEvent.MatchWon -> 4500
         is GameEvent.Info -> 500
+        is GameEvent.BloodChanged -> 800
+        is GameEvent.StandeeMoved -> 1600
+        is GameEvent.CreatureBlocked -> 2400
+        is GameEvent.CreatureKept -> 1600
+        is GameEvent.CreatureLost -> 1600
+        is GameEvent.ReactionTriggered -> 2400
     }
 
     @Synchronized

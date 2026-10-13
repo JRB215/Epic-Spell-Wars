@@ -14,6 +14,11 @@
 
 # Expansion 1 scans (its rulebook PDF is already covered by *.pdf)
 /Expansion 1/Dead Wizard/
+/Expansion 1/Treasures/
+/Expansion 1/Wild Magic/
+/Expansion 1/Source/
+/Expansion 1/Quality/
+/Expansion 1/Delivery/
 /Expansion 1/cards-upright/
 
 # Upright copies made by tools/orient_scans.py

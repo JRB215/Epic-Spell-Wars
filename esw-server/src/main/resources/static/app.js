@@ -398,6 +398,11 @@ function postEvent(e) {
       break;
     case 'heal': floatText(e.player, `+${e.amount}`, 'heal'); if (e.player === mine) flash('heal'); sound.heal(); break;
     case 'treasureGained': flyTreasure(e); break;
+    case 'blood': floatText(e.player, `${e.change > 0 ? '+' : ''}${e.change} Blood`, 'blood'); break;
+    case 'standee': banner(e.text, false, 1500); break;
+    case 'creatureBlocked': banner(e.text, true, 2200); shake(e.player); sound.hit(); break;
+    case 'creatureKept': case 'creatureLost': banner(e.text, false, 1500); break;
+    case 'reaction': banner(e.text, true, 2200); break;
     case 'deckRevealed': showReveal(e); break;
     case 'died': banner(`${nameOf(e.player)} is dead!`, true, 2100); sound.death(); break;
     case 'gameWon': banner(e.text, true, 3200); sound.win(); break;
@@ -579,13 +584,22 @@ function renderLobby(app) {
   const games = lobby.games || [];
   $('#gamesList').innerHTML = games.length ? games.map((g) => {
     const open = g.state === 'LOBBY' && g.players.length < g.max;
-    return `<div class="game-row"><div class="grow"><b>${esc(g.title)}</b><small>${g.players.map(esc).join(', ')} &middot; ${g.players.length}/${g.max}</small></div>
+    return `<div class="game-row"><div class="grow"><b>${esc(g.title)}</b><small>${g.players.map(esc).join(', ')} &middot; ${g.players.length}/${g.max} &middot; ${esc(g.mode || '')}</small></div>
       <span class="tag">${g.state === 'LOBBY' ? 'waiting' : g.state === 'PLAYING' ? 'in progress' : 'finished'}</span>
       <button class="btn" data-join="${esc(g.id)}" ${open ? '' : 'disabled'}>Join</button></div>`;
   }).join('') : '<p class="muted">No games yet. Create one and invite your friends.</p>';
   document.querySelectorAll('[data-join]').forEach((b) => { b.onclick = () => send({ t: 'joinGame', id: b.dataset.join }); });
   const lb = lobby.leaderboard || [];
   $('#board').innerHTML = lb.length ? lb.map((r, i) => `<div class="lb-row"><span>${i + 1}. ${esc(r.name)}</span><b>${r.wins}</b></div>`).join('') : '<p class="muted">Nobody has won a match yet.</p>';
+}
+
+/** Base game, Expansion 1 only, or both decks merged. Only the host can change it. */
+function modePickerHtml() {
+  const modes = room.modes || [];
+  if (modes.length < 2) return '';
+  const blurb = { BASE: 'The original 2012 game.', EXPANSION1: 'Only the Expansion 1 cards (Blood, the Standee and Creatures).', MERGED: 'Both card sets shuffled together, with the Expansion 1 rules.' };
+  const buttons = modes.map((m) => `<button class="btn ${m.id === room.mode ? '' : 'secondary'}" data-mode="${esc(m.id)}" ${room.owner ? '' : 'disabled'}>${esc(m.label)}</button>`).join('');
+  return `<div class="modepick"><div class="muted">Cards and rules</div><div class="top-actions">${buttons}</div><small class="muted">${esc(blurb[room.mode] || '')}</small></div>`;
 }
 
 function renderRoom(app) {
@@ -598,6 +612,7 @@ function renderRoom(app) {
     <div class="panel" style="max-width:640px;margin:0 auto"><h2>${esc(room.title)}</h2>
       <p class="muted">${room.seats.length} of ${room.max} seats taken. ${room.owner ? 'You are the host.' : 'Waiting for the host to start.'}</p>
       <div class="seat-list">${seats}</div>
+      ${modePickerHtml()}
       <div class="top-actions" style="margin-top:16px">
         ${room.owner ? `<button class="btn" id="addBot" ${room.seats.length >= room.max ? 'disabled' : ''}>Add a bot</button><button class="btn" id="start" ${canStart ? '' : 'disabled'}>Start the game</button>` : ''}
         <span class="spacer"></span><button class="btn secondary" id="leave">Leave</button></div>
@@ -605,6 +620,7 @@ function renderRoom(app) {
   wireTop();
   const ab = $('#addBot'); if (ab) ab.onclick = () => send({ t: 'addBot' });
   const st = $('#start'); if (st) st.onclick = () => send({ t: 'start' });
+  document.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => send({ t: 'setMode', mode: b.dataset.mode }); });
   $('#leave').onclick = () => send({ t: 'leaveGame' });
   document.querySelectorAll('[data-remove]').forEach((b) => { b.onclick = () => send({ t: 'removeSeat', seat: Number(b.dataset.remove) }); });
 }
@@ -619,6 +635,15 @@ function lwsHtml(n) {
 }
 
 const flyingUids = new Set(); // treasures that are still flying to their owner
+
+/** Blood counter, Standee marker and kept Creatures (Expansion 1 only). */
+function expansionHtml(p) {
+  if (!game.expansion) return '';
+  const blood = `<span class="bloodtag" title="Blood: carries from game to game (0 to 25)"><img src="${PIECE('marker')}" alt="" onerror="this.remove()">Blood <b>${p.blood}</b></span>`;
+  const std = p.standee ? `<span class="stdtag" title="This wizard has the Standee: +1 Blood at the end of every round"><img src="${PIECE('tower2')}" alt="" onerror="this.remove()">Standee</span>` : '';
+  const creatures = (p.creatures || []).map((c) => { cardCache[c.id] = c; return `<span class="chip creature" data-cid="${esc(c.id)}">${esc(c.name)}</span>`; }).join('');
+  return `<div class="xrow">${blood}${std}${creatures}</div>`;
+}
 
 function chipsHtml(p) {
   const die = p.bonusDie ? `<span class="chip die" title="Slag Shangri-La: this die is added to every Power Roll on ${esc(p.name)}'s first turn, then removed.">Slag die +${p.bonusDie} (first turn)</span>` : '';
@@ -684,7 +709,7 @@ function foeSeatHtml(p, pickable, role) {
       <div class="who"><b>${esc(p.name)}</b><small>${esc(p.hero.name)}${p.hero.title ? ', ' + esc(p.hero.title) : ''}</small></div></div>
     <div class="hprow"><img class="sk" src="${PIECE('skull')}" alt="" onerror="this.style.display='none'">
       <div class="hpbar"><i style="width:${pct}%;background:${hpColor(p)}"></i><span>${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span></div></div>
-    <div class="chips">${chipsHtml(p)}</div>
+    ${expansionHtml(p)}<div class="chips">${chipsHtml(p)}</div>
     <div class="fmeta"><span>${p.alive ? 'Hand ' + p.handCount : ''}</span><span class="mini-spell">${mini}</span><span>${esc(tags)}</span></div></div>`;
 }
 
@@ -695,7 +720,7 @@ function mineHtml(p, pickable) {
       <img class="bd" src="${esc(p.hero.board)}?w=700" alt="" onerror="this.style.minHeight='140px'">
       ${p.alive ? `<div class="skull" id="mySkull" style="left:${x}%;top:${y}%"><img src="${PIECE('skull')}" alt="" onerror="this.remove()"></div>` : ''}</div>${lwsHtml(p.tokens)}</div>
     <div class="row"><span class="hp">${p.alive ? `${p.hp} / ${p.maxHp} HP` : 'DEAD'}</span></div>
-    <div class="chips">${chipsHtml(p)}</div></div>`;
+    ${expansionHtml(p)}<div class="chips">${chipsHtml(p)}</div></div>`;
 }
 
 /** The deck, the discard pile (top card face up), the Treasure pile and the Dead Wizard pile, with their sizes. */
@@ -715,8 +740,13 @@ function turnbarHtml() {
     return `<span class="${cls}">${i + 1}. ${esc(nameOf(s.player))} &middot; ${s.components} card${s.components === 1 ? '' : 's'} &middot; Initiative ${s.initiative}${s.tied ? ' (tie)' : ''}</span>`;
   }).join('');
   const d = game.decks;
+  if (game.poster) cardCache[game.poster.id] = game.poster;
+  const mid = game.expansion
+    ? `<span class="tchip">Standee: ${game.standeeHolder == null ? 'in the middle' : esc(nameOf(game.standeeHolder))}</span>`
+      + (game.poster ? `<span class="tchip" data-cid="${esc(game.poster.id)}">Most Wanted Poster in the middle</span>` : '')
+    : '';
   const pile = (img, n, label) => `<div class="pile"><img src="${img}?w=80" alt="" onerror="this.style.display='none'">${label} ${n}</div>`;
-  return `<div class="turnbar">${chips}<span class="piles">${pile(BACKS.main, d.main, 'Deck')}${pile(BACKS.treasure, d.treasure, 'Treasures')}${pile(BACKS.dead, d.deadWizard, 'Dead')}<div class="pile">Discard<br>${d.mainDiscard}</div></span></div>`;
+  return `<div class="turnbar">${chips}${mid}<span class="piles">${pile(BACKS.main, d.main, 'Deck')}${pile(BACKS.treasure, d.treasure, 'Treasures')}${pile(BACKS.dead, d.deadWizard, 'Dead')}<div class="pile">Discard<br>${d.mainDiscard}</div></span></div>`;
 }
 
 function fcHtml(sc, flipped) {

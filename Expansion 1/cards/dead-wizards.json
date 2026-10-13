@@ -1,0 +1,15 @@
+{
+  "deck": "DEAD_WIZARD",
+  "set": "expansion1",
+  "note": "Text is copied from the owner's scans; copies per card are from the owner's own count list (25 in all, like the base set). Cards that say 'Resolve now' take effect the moment they are drawn instead of at the start of the next game, and stay in front of the wizard until the end of the game.",
+  "cards": [
+    { "id": "ex-exsanguination", "name": "Ex Exsanguination", "copies": 3, "resolveNow": true,  "scan": "IMG_20261008_0001.png", "text": "Resolve now: Steal 1 Blood from each Living Wizard." },
+    { "id": "pet-from-beyond",   "name": "Pet from Beyond",   "copies": 3, "resolveNow": false, "scan": "IMG_20261008_0002.png", "text": "At the start of the next game, reveal cards from the Main Deck until you find a Creature. Start the game with that Creature face up and in play. Discard the rest." },
+    { "id": "grave-terrain",     "name": "Grave Terrain",     "copies": 2, "resolveNow": true,  "scan": "IMG_20261008_0005.png", "text": "Resolve now: Take the Standee. If you have the Standee at the end of a round while dead, gain 4 Blood instead of 1." },
+    { "id": "hounds-from-hell",  "name": "Hounds from Hell",  "copies": 4, "resolveNow": false, "scan": "IMG_20261008_0006.png", "text": "Keep this card in front of you until you make a Power Roll with a Creature. Add one die to that Power Roll." },
+    { "id": "zap-o-rama",        "name": "Zap-o-Rama",        "copies": 3, "resolveNow": false, "scan": "IMG_20261008_0007.png", "text": "When you resolve your first spell next game, add the top card of the Main Deck to your spell. If it's a Wild Magic card, put it into your hand and add the next card to your spell." },
+    { "id": "classy-in-repose",  "name": "Classy in Repose",  "copies": 4, "resolveNow": true,  "scan": "IMG_20261008_0011.png", "text": "Resolve now: Gain 2 Blood. If you were the first Wizard killed this game, gain 2 additional Blood." },
+    { "id": "lingering-curse",   "name": "Lingering Curse",   "copies": 3, "resolveNow": false, "scan": "IMG_20261008_0012.png", "text": "The winner of the Last Wizard Standing token last game starts this game with two fewer cards." },
+    { "id": "just-rewards",      "name": "Just Rewards",      "copies": 3, "resolveNow": true,  "scan": "IMG_20261008_0016.png", "text": "Resolve now: For every Last Wizard Standing token in play, gain 1 Blood. If you don't have any Last Wizard Standing tokens, start the next game with a Treasure." }
+  ]
+}

@@ -22,7 +22,7 @@ interface Decisions {
     /** Pick one player id out of [candidates]. */
     suspend fun choosePlayer(player: Int, candidates: List<Int>, reason: String): Int
 
-    /** Pick the uid of one of [candidates] (Treasures). */
+    /** Pick the uid of one of [candidates] (Treasures, or Creatures when one is to be discarded). */
     suspend fun chooseTreasure(player: Int, candidates: List<CardInstance>, reason: String): Int
 
     /** Pick the uid of one of [candidates] (cards in hand). */

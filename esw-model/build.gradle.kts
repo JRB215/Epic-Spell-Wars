@@ -17,11 +17,12 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// The card data files live in Base/cards (and later Expansion folders). They are copied
-// into the jar so the engine can load them from the classpath.
+// The card data files live in Base/cards and Expansion 1/cards. They are copied into the jar so the
+// engine can load them from the classpath.
 val copyCardData by tasks.registering(Copy::class) {
-    from(rootProject.file("Base/cards")) { include("*.json") }
-    into(layout.buildDirectory.dir("generated/card-data/cards/base"))
+    from(rootProject.file("Base/cards")) { include("*.json"); into("cards/base") }
+    from(rootProject.file("Expansion 1/cards")) { include("*.json"); into("cards/expansion1") }
+    into(layout.buildDirectory.dir("generated/card-data"))
 }
 
 sourceSets.main {
