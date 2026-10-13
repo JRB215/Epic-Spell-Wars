@@ -381,7 +381,7 @@ class Game(
      */
     private fun turnOrderPreview(living: List<PlayerState>): List<LockedSpell> {
         data class Key(val last: Boolean, val impatient: Boolean, val components: Int, val initiative: Int)
-        fun key(p: PlayerState) = Key(p.actLast, isImpatient(p), p.spell!!.cards.size, initiativeOf(p))
+        fun key(p: PlayerState) = Key(p.actLast, isImpatient(p), p.spell!!.countedCards, initiativeOf(p))
         val sorted = living.sortedWith(
             compareBy<PlayerState>({ key(it).last }, { if (key(it).impatient) 0 else 1 }, { key(it).components }, { -key(it).initiative }),
         )
@@ -399,10 +399,18 @@ class Game(
         val waiting = players.filter { it.alive && !it.acted && it.spell != null }
         if (waiting.isEmpty()) return null
         val pool = waiting.filter { !it.actLast }.ifEmpty { waiting }
-        val order = compareBy<PlayerState>({ if (isImpatient(it)) 0 else 1 }, { it.spell!!.cards.size }, { -initiativeOf(it) })
+        val order = compareBy<PlayerState>({ if (isImpatient(it)) 0 else 1 }, { it.spell!!.countedCards }, { -initiativeOf(it) })
         val best = pool.sortedWith(order).first()
         val tied = pool.filter { order.compare(it, best) == 0 }
-        return if (tied.size == 1) best else rollOff(tied)
+        if (tied.size == 1) return best
+        if (expansion) {
+            // Grabbel-Snak's 6-Headed Tape Worm: pay 1 Blood to break the tie and go first.
+            for (holder in tied.filter { it.has("grabbel-snaks-6-headed-tape-worm") }) {
+                val worm = holder.treasures.first { it.def.id == "grabbel-snaks-6-headed-tape-worm" }
+                if (payForTreasure(holder, worm, 1, "win the tie and resolve first (Grabbel-Snak's Tape Worm)")) return holder
+            }
+        }
+        return rollOff(tied)
     }
 
     private fun rollOff(tied: List<PlayerState>): PlayerState {
@@ -419,26 +427,111 @@ class Game(
     private suspend fun takeTurn(p: PlayerState) {
         activeCaster = p
         emit(GameEvent.TurnStarted(p.id))
+        p.rerolledCreatureThisTurn = false
+        p.creatureDiceThisTurn = 0
+        if (expansion) startOfTurnTreasures(p)
         if (p.has("plink-cannon")) leftOf(p)?.let { damage(it, 1, p) }
         if (p.alive) {
             revealSpell(p)
             resolveSpell(p)
         }
         resolvePendingBacklash()
+        if (expansion && p.alive) endOfTurnTreasures(p)
         p.spell?.let { spell ->
             emit(GameEvent.SpellFinished(p.id, spell.cards.sortedBy { it.slot.ordinal }.map { it.card.def }))
         }
-        discardSpell(p)
+        finishSpell(p)
+        val lastToAct = isLastToAct(p)
         p.acted = true
         p.bonusDie = null // only the first turn gets it
+        if (expansion && p.alive && lastToAct && p.has("the-golden-handcuffs")) gainTreasure(p)
+    }
+
+    /** Expansion 1 Treasures that act at the start of their owner's turn, including the "Pay Blood:" powers. */
+    private suspend fun startOfTurnTreasures(p: PlayerState) {
+        if (p.has("cod-piece-of-cthulhu")) {
+            val victims = foesOf(p).filter { it.blood > 0 }
+            if (victims.isNotEmpty()) stealBlood(p, pickAmong(p, victims, "foe to steal 1 Blood from (Cod Piece of Cthulhu)"), 1)
+        }
+        if (p.has("fish-hands") && players.none { it.acted }) {
+            val owners = foesOf(p).filter { it.treasures.isNotEmpty() }
+            if (owners.isNotEmpty()) {
+                val victim = pickAmong(p, owners, "foe to swap a Treasure with (Fish Hands)")
+                val theirs = chooseTreasureOf(p, victim, "Treasure to take from ${victim.name}")
+                val mine = p.treasures.first { it.def.id == "fish-hands" }
+                if (theirs != null) {
+                    p.treasures.remove(mine); victim.treasures.remove(theirs)
+                    p.treasures.add(theirs); victim.treasures.add(mine)
+                    emit(GameEvent.Info("${p.name} swaps Fish Hands for ${theirs.def.name} from ${victim.name}"))
+                }
+            }
+        }
+        for (t in p.treasures.toList()) {
+            if (!p.alive) return
+            when (t.def.id) {
+                "snerds-rage" -> if (payForTreasure(p, t, 3, "Snerd's Rage: heal 2 HP")) heal(p, 2)
+                "first-loser-trophy" -> if (payForTreasure(p, t, 1, "First Loser Trophy: heal 1 HP")) heal(p, 1)
+                "monster-baby" -> if (foesOf(p).isNotEmpty() && payForTreasure(p, t, 4, "Monster Baby: 2 damage to a foe")) {
+                    damage(pickAmong(p, foesOf(p), "foe to take 2 damage"), 2, p)
+                }
+                "gang-bang-a-gong" -> if (foesOf(p).isNotEmpty() && payForTreasure(p, t, 2, "Gang Bang-A-Gong: damage a foe")) {
+                    val target = pickAmong(p, foesOf(p), "foe to hit with the Gong")
+                    damage(target, target.hp / 5, p)
+                }
+            }
+        }
+    }
+
+    private suspend fun endOfTurnTreasures(p: PlayerState) {
+        if (p.has("triple-barrel-shotgun")) {
+            val glyphs = Glyph.entries.sumOf { glyphCount(p, it) / 3 }
+            gainBlood(p, glyphs, "Triple-Barrel Shotgun")
+        }
+    }
+
+    /**
+     * Creatures that stayed in play come back into the spell to attack again. They are brought in as extra Delivery
+     * components, so the owner chooses the order they resolve in, but they do not count toward how many cards the spell
+     * has (a kept Creature never slows down your turn).
+     */
+    private fun bringBackCreatures(p: PlayerState) {
+        if (!expansion) return
+        val spell = p.spell ?: return
+        for (c in p.creatures) {
+            spell.cards.add(SpellCard(c, CardType.DELIVERY, wild = false).also { it.fromPlay = true })
+            emit(GameEvent.CardAddedToSpell(p.id, c.def.name))
+        }
+    }
+
+    /** The turn is over: discard the spell, except for Creatures that earned a KEEP, which stay in play. */
+    private fun finishSpell(p: PlayerState) {
+        val spell = p.spell ?: return
+        if (!expansion) { discardSpell(p); return }
+        for (sc in spell.cards) {
+            val creature = sc.card.def.creature
+            when {
+                creature && sc.keep && p.alive -> {
+                    if (!sc.fromPlay) { p.creatures.add(sc.card); emit(GameEvent.CreatureKept(p.id, sc.card.def.name)) }
+                }
+                sc.fromPlay -> {
+                    if (p.creatures.remove(sc.card)) {
+                        mainDiscard.add(sc.card)
+                        emit(GameEvent.CreatureLost(p.id, sc.card.def.name, "it did not roll KEEP"))
+                    }
+                }
+                !(sc.protonGem && sc.wild) -> mainDiscard.add(sc.card)
+            }
+        }
+        spell.cards.clear()
     }
 
     private suspend fun revealSpell(p: PlayerState) {
         val spell = p.spell!!
-        val playedCards = spell.cards.size
+        val playedCards = spell.countedCards
         spell.revealed = true
         emit(GameEvent.SpellRevealed(p.id, spell.cards.map { if (it.wild) "Wild Magic" else it.card.def.name }))
         replaceWildMagic(p)
+        bringBackCreatures(p)
         if (spell.usedWildMagic && p.has("jokers-wild-codpiece")) {
             heal(p, 2)
             gainTreasure(p)
@@ -480,6 +573,21 @@ class Game(
                 sc.card = found
                 sc.wild = false
             }
+            // Dr. Shrinky's Couch: keep looking for a second card of the type and add that one to the spell as well.
+            if (expansion && found != null && p.has("dr-shrinkys-couch")) {
+                var second: CardInstance? = null
+                val skipped = mutableListOf<CardInstance>()
+                while (true) {
+                    val c = drawMain() ?: break
+                    if (c.def.type == sc.slot) { second = c; break } else skipped.add(c)
+                }
+                mainDiscard.addAll(skipped)
+                if (second != null) {
+                    spell.cards.add(SpellCard(second, sc.slot, wild = false))
+                    emit(GameEvent.DeckRevealed(p.id, "Dr. Shrinky's Couch", listOf(RevealedCard(second.def, true))))
+                    emit(GameEvent.CardAddedToSpell(p.id, second.def.name))
+                }
+            }
             val shown = aside.map { RevealedCard(it.def, false) } + listOfNotNull(found?.let { RevealedCard(it.def, true) })
             if (shown.isNotEmpty()) emit(GameEvent.DeckRevealed(p.id, "Wild Magic", shown))
             emit(GameEvent.WildMagicResolved(p.id, sc.slot.name, found?.def?.name))
@@ -507,14 +615,20 @@ class Game(
                 for (holder in foesOf(p).filter { it.has("crown-of-the-meek") }) damage(p, 1, holder)
             }
             if (!p.alive) break
-            CardEffects.run(EffectContext(this, p, next.card.def, next.card.def.type), next.card.def.id)
+            CardEffects.run(EffectContext(this, p, next.card.def, next.card.def.type, next), next.card.def.id)
+            // Steer-Roids!: pay 3 Blood after a Creature resolves to KEEP it instead of discarding it.
+            if (expansion && next.card.def.creature && !next.keep && p.alive && p.has("steer-roids")) {
+                val treasure = p.treasures.first { it.def.id == "steer-roids" }
+                if (payForTreasure(p, treasure, 3, "keep ${next.card.def.name} (Steer-Roids!)")) next.keep = true
+            }
             resolvePendingBacklash()
         }
     }
 
+    /** Discards a spell that did not get to finish (a dead wizard's, or at the end of a game). Kept Creatures are not touched. */
     internal fun discardSpell(p: PlayerState) {
         val spell = p.spell ?: return
-        for (sc in spell.cards) if (!(sc.protonGem && sc.wild)) mainDiscard.add(sc.card)
+        for (sc in spell.cards) if (!sc.fromPlay && !(sc.protonGem && sc.wild)) mainDiscard.add(sc.card)
         spell.cards.clear()
     }
 
@@ -586,16 +700,17 @@ class Game(
      * A wizard takes damage. [source] is whoever caused it (null if nobody did). In Expansion 1 a face-up Creature can
      * soak up damage from a foe, and a Reaction can save a wizard who would otherwise die.
      */
-    internal suspend fun damage(target: PlayerState, amount: Int, source: PlayerState?) {
-        if (amount <= 0 || !target.alive) return
+    internal suspend fun damage(target: PlayerState, amount: Int, source: PlayerState?): Boolean {
+        if (amount <= 0 || !target.alive) return false
         if (expansion && source != null && source !== target && target.creatures.isNotEmpty() &&
             offerBlock(target, source, amount)
-        ) return
+        ) return true
         val before = target.hp
         target.hp = maxOf(0, before - amount)
         emit(GameEvent.DamageDealt(target.id, amount, source?.id, target.hp))
         if (target.hp == 0 && !(expansion && reactToDeath(target, source, before))) slay(target, source)
         checkGameEnd()
+        return false
     }
 
     /** Offers the wizard the chance to discard one Creature to cancel this one hit. Returns true if they did. */
@@ -690,6 +805,11 @@ class Game(
 
     internal fun discardToMain(card: CardInstance) { mainDiscard.add(card) }
 
+    internal fun discardAllToMain(cards: List<CardInstance>) { mainDiscard.addAll(cards) }
+
+    /** The dice behind the most recent Power Roll (Fart Knight resolves them one by one). */
+    internal var lastPowerDice: List<Int> = emptyList()
+
     internal fun drawCards(p: PlayerState, count: Int) {
         repeat(count) { drawMain()?.let { p.hand.add(it) } }
     }
@@ -708,19 +828,51 @@ class Game(
         return treasureDeck.removeFirstOrNull()
     }
 
-    internal fun gainTreasure(p: PlayerState) {
+    internal suspend fun gainTreasure(p: PlayerState) {
         if (!p.alive) return
         val card = drawTreasureCard() ?: return
         receiveTreasure(p, card, null)
     }
 
-    private fun receiveTreasure(p: PlayerState, card: CardInstance, from: Int?) {
+    private suspend fun receiveTreasure(p: PlayerState, card: CardInstance, from: Int?) {
+        if (expansion && card.def.id == "most-wanted-poster" && from == null) {
+            // It goes to the middle of the table instead, and the wizard draws another Treasure.
+            poster?.let { treasureDiscard.add(it) }
+            poster = card
+            emit(GameEvent.Info("${p.name} draws the Most Wanted Poster: it goes to the middle of the table"))
+            gainTreasure(p)
+            return
+        }
         p.treasures.add(card)
         emit(GameEvent.TreasureGained(p.id, card.def.name, from))
         if (card.def.id == "thinking-cap") drawCards(p, 1)
+        if (!expansion) return
+        when (card.def.id) {
+            "idol-of-the-magic-pussy" -> takeStandee(p)
+            "fate-coins" -> {
+                val named = decisions.choosePlayer(p.id, players.filter { it.alive }.map { it.id }, "the next wizard to be slain")
+                p.prediction = named
+                emit(GameEvent.Info("${p.name} names ${players[named].name} as the next to be slain"))
+            }
+            "gluttons-regalia" -> {
+                val options = p.hand.filter { it.def.type != CardType.WILD_MAGIC }
+                if (options.isNotEmpty()) {
+                    val uid = decisions.chooseCardFromHand(p.id, options, "card to slip under Glutton's Regalia")
+                    val chosen = options.firstOrNull { it.uid == uid } ?: error("Invalid card choice $uid")
+                    p.hand.remove(chosen)
+                    p.regalia?.let { mainDiscard.add(it) }
+                    p.regalia = chosen
+                }
+            }
+            "monster-baby" -> {
+                for (w in players.filter { it.alive }) damage(w, 1, p)
+                val weak = players.count { it.alive && it.hp <= 5 }
+                gainBlood(p, 2 * weak, "Monster Baby")
+            }
+        }
     }
 
-    internal fun stealTreasure(thief: PlayerState, victim: PlayerState, card: CardInstance) {
+    internal suspend fun stealTreasure(thief: PlayerState, victim: PlayerState, card: CardInstance) {
         if (!victim.treasures.remove(card)) return
         emit(GameEvent.TreasureLost(victim.id, card.def.name, destroyed = false))
         if (thief.alive) receiveTreasure(thief, card, victim.id) else treasureDiscard.add(card)
@@ -768,6 +920,10 @@ class Game(
         } else {
             p.deadWizardCards.add(card)
             if (expansion && card.def.resolveNow) resolveDeadWizardNow(p, card)
+        }
+        // The I Can't Believe This Shit: whenever a foe draws a Dead Wizard card, roll a die; 5 or 6 heals 1 HP.
+        if (expansion) for (holder in players.filter { it.alive && it !== p && it.has("the-i-cant-believe-this-shit") }) {
+            if (rollSingle(holder, "The I Can't Believe This Shit") >= 5) heal(holder, 1)
         }
     }
 
@@ -817,20 +973,17 @@ class Game(
 
     internal fun glyphCount(p: PlayerState, glyph: Glyph): Int {
         val inSpell = p.spell?.cards?.count { !it.wild && it.card.def.glyph == glyph } ?: 0
-        return inSpell + p.treasures.count { it.def.countsAsGlyph == glyph }
+        val regalia = if (p.regalia?.def?.glyph == glyph) 1 else 0 // Glutton's Regalia counts the card slipped under it
+        return inSpell + regalia + p.treasures.count { it.def.countsAsGlyph == glyph }
     }
 
-    internal fun distinctGlyphs(p: PlayerState): Int {
-        val seen = mutableSetOf<Glyph>()
-        p.spell?.cards?.forEach { if (!it.wild) it.card.def.glyph?.let(seen::add) }
-        p.treasures.forEach { it.def.countsAsGlyph?.let(seen::add) }
-        return seen.size
-    }
+    internal fun distinctGlyphs(p: PlayerState): Int = glyphsInSpell(p).size
 
     internal fun glyphsInSpell(p: PlayerState): Set<Glyph> {
         val seen = mutableSetOf<Glyph>()
         p.spell?.cards?.forEach { if (!it.wild) it.card.def.glyph?.let(seen::add) }
         p.treasures.forEach { it.def.countsAsGlyph?.let(seen::add) }
+        p.regalia?.def?.glyph?.let(seen::add)
         return seen
     }
 
@@ -838,20 +991,44 @@ class Game(
      * Power Roll: one die for each card in the spell with [glyph] (Treasures that count as that glyph included),
      * plus extra dice and flat bonuses from Treasures. [rollType] is the kind of card whose text is rolling.
      */
-    internal suspend fun powerRoll(p: PlayerState, glyph: Glyph, rollType: CardType): Int {
+    internal suspend fun powerRoll(p: PlayerState, glyph: Glyph, rollType: CardType, creatureRoll: Boolean = false): Int {
         var diceCount = glyphCount(p, glyph) + p.extraDiceThisRound
         if (rollType == CardType.DELIVERY && p.has("phister-cannon")) diceCount++
         if (rollType == CardType.QUALITY && p.has("skullzor-ring-of-power")) diceCount += 2
         if (p.has("slow-rollers-throne") && isLastToAct(p)) diceCount++
         if (p.has("desperation-stones") && p.hp <= 9) diceCount++
+        if (expansion && creatureRoll) {
+            // Hounds from Hell cards wait for a Creature's Power Roll and add a die to it; Shub-Niggurath adds dice too.
+            diceCount += p.houndsDice + p.creatureDiceThisTurn
+            p.houndsDice = 0
+        }
         diceCount = maxOf(diceCount, 1)
 
         var rolled = MutableList(diceCount) { dice.d6() }
+        if (expansion && p.has("cheaters-dice")) {
+            // Cheater's Dice: any 1 you roll is rolled again (once).
+            for (i in rolled.indices) if (rolled[i] == 1) rolled[i] = dice.d6()
+        }
         if (p.has("cheater-handbook")) {
             val options = rolled.map { "Reroll the $it" } + "Keep these dice"
             val pick = decisions.chooseOption(p.id, "Cheater's Handbook: reroll one die?", options)
             require(pick in options.indices) { "Invalid option $pick" }
             if (pick < rolled.size) rolled[pick] = dice.d6()
+        }
+        if (expansion && p.has("the-globe-of-sacrifice")) {
+            val globe = p.treasures.first { it.def.id == "the-globe-of-sacrifice" }
+            if (payForTreasure(p, globe, 2, "re-roll one die (The Globe of Sacrifice)")) {
+                val options = rolled.map { "Re-roll the $it" }
+                val pick = decisions.chooseOption(p.id, "Re-roll which die?", options)
+                require(pick in options.indices) { "Invalid option $pick" }
+                rolled[pick] = dice.d6()
+            }
+        }
+        if (expansion && creatureRoll && p.has("manuel-decryptozoic") && !p.rerolledCreatureThisTurn &&
+            decisions.chooseYesNo(p.id, "Reroll this Creature's Power roll? You must keep the new result (Manuel De'Cryptozoic).")
+        ) {
+            p.rerolledCreatureThisTurn = true
+            rolled = MutableList(diceCount) { dice.d6() }
         }
         var total = rolled.sum() + flatBonus(p, diceCount)
         if (p.has("lady-lucks-brassiere") &&
@@ -862,7 +1039,9 @@ class Game(
             total = rolled.sum() + flatBonus(p, diceCount)
             gainTreasure(p)
         }
+        lastPowerDice = rolled.toList()
         emit(GameEvent.DiceRolled(p.id, "Power Roll", rolled.toList(), total))
+        if (expansion && total >= 13 && p.has("the-sausage-masters-steed")) gainBlood(p, 1, "The Sausage Master's Steed")
         if (p.has("amulet-of-maneg")) heal(p, rolled.count { it == 6 })
         if (total <= 4) for (h in foesOf(p).filter { it.has("fools-gold") }) heal(h, 2)
         return total
@@ -938,8 +1117,9 @@ class Game(
      */
     fun audit(): String? {
         val main = (mainDeck + mainDiscard + players.flatMap { it.hand + it.reservedWildMagic } +
-            players.flatMap { p -> p.spell?.cards?.filter { !(it.protonGem && it.wild) }?.map { it.card }.orEmpty() })
-        val treasures = treasureDeck + treasureDiscard + players.flatMap { it.treasures }
+            players.flatMap { p -> p.spell?.cards?.filter { !(it.protonGem && it.wild) && !it.fromPlay }?.map { it.card }.orEmpty() } +
+            players.flatMap { it.creatures } + players.mapNotNull { it.regalia })
+        val treasures = treasureDeck + treasureDiscard + players.flatMap { it.treasures } + listOfNotNull(poster)
         val dead = deadDeck + deadDiscard + players.flatMap { it.deadWizardCards }
         fun check(name: String, cards: List<CardInstance>, expected: Int): String? {
             if (cards.size != expected) return "$name has ${cards.size} cards, expected $expected"

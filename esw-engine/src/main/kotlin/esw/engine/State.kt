@@ -97,6 +97,9 @@ class PlayerState(val id: Int, val name: String, val hero: HeroDef) {
     /** Manuel De'Cryptozoic: whether the once-per-turn Creature reroll has been used this turn. */
     var rerolledCreatureThisTurn = false
 
+    /** Shub-Niggurath: extra dice added to each of this wizard's Creature Power Rolls this turn. */
+    var creatureDiceThisTurn = 0
+
     fun has(treasureId: String) = treasures.any { it.def.id == treasureId }
 }
 

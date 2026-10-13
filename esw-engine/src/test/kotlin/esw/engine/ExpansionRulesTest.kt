@@ -107,7 +107,7 @@ class ExpansionRulesTest {
         round(game)
         // 20 - 3 damage + 2 healed by King Oberon's.
         assertEquals(19, game.players[1].hp)
-        assertEquals(1, game.players[1].creatures.size)
+        assertTrue(events.none { it is GameEvent.CreatureBlocked })
     }
 
     @Test
@@ -117,7 +117,7 @@ class ExpansionRulesTest {
         game.giveCreature(game.players[0], "bob")
         round(game)
         assertEquals(18, game.players[0].hp)
-        assertEquals(1, game.players[0].creatures.size)
+        assertTrue(events.none { it is GameEvent.CreatureBlocked })
     }
 
     @Test

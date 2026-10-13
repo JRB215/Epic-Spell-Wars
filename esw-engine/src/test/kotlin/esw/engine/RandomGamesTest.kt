@@ -2,6 +2,7 @@ package esw.engine
 
 import esw.model.CardCatalog
 import esw.model.CardType
+import esw.model.GameMode
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
 import kotlin.test.Test
@@ -23,7 +24,22 @@ class RandomGamesTest {
         assertEquals(60, spellCards.size)
     }
 
-    private fun playMatch(seed: Int, players: Int, events: MutableList<GameEvent>? = null): Pair<Int?, Game> {
+    @Test
+    fun everyExpansionSpellCardHasAnEffect() {
+        val expansion = CardCatalog.load(GameMode.EXPANSION1)
+        val spellCards = expansion.allDefs.values.filter {
+            it.type == CardType.SOURCE || it.type == CardType.QUALITY || it.type == CardType.DELIVERY
+        }
+        assertEquals(emptyList(), spellCards.map { it.id }.filter { it !in CardEffects.ids }, "cards with no effect written")
+        assertEquals(60, spellCards.size)
+    }
+
+    private fun playMatch(
+        seed: Int,
+        players: Int,
+        events: MutableList<GameEvent>? = null,
+        catalog: CardCatalog = this.catalog,
+    ): Pair<Int?, Game> {
         val random = Random(seed)
         lateinit var game: Game
         var problem: String? = null
@@ -51,6 +67,24 @@ class RandomGamesTest {
                 }
             }
             assertTrue(finished >= 58, "only $finished of 60 matches with $players players produced a winner")
+        }
+    }
+
+    @Test
+    fun randomExpansionAndMergedMatchesFinishForEveryPlayerCount() {
+        for (mode in listOf(GameMode.EXPANSION1, GameMode.MERGED)) {
+            val expansionCatalog = CardCatalog.load(mode)
+            for (players in 2..6) {
+                var finished = 0
+                for (seed in 1..40) {
+                    val (winner, game) = playMatch(seed * 17 + players, players, catalog = expansionCatalog)
+                    if (winner != null) {
+                        finished++
+                        assertEquals(2, game.players[winner].tokens)
+                    }
+                }
+                assertTrue(finished >= 38, "only $finished of 40 $mode matches with $players players produced a winner")
+            }
         }
     }
 

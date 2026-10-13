@@ -1,4 +1,4 @@
-package esw.engine
+﻿package esw.engine
 
 import esw.model.CardType
 import esw.model.Glyph
@@ -16,23 +16,35 @@ internal object CardEffects {
         ctx.effect()
     }
 
-    private fun def(id: String, effect: Effect) {
+    internal fun def(id: String, effect: Effect) {
         table[id] = effect
     }
 
-    /** A Power Roll card: pick targets, roll, then act on the result band (1, 2 or 3). */
-    private fun rolled(id: String, kind: Target, body: suspend EffectContext.(band: Int, targets: List<PlayerState>) -> Unit) =
-        def(id) {
-            val targets = targets(kind)
-            val total = powerRoll()
-            val band = band(total)
-            // Tell the screens which result of the table applies, so they can show just that one.
-            g.emit(GameEvent.RollOutcome(caster.id, g.catalog.allDefs.getValue(id).name, total, band))
-            body(band, targets)
-        }
+    /**
+     * A Power Roll card: pick targets, roll, then act on the result band (1, 2 or 3).
+     * [before] is anything the card says ahead of its Target line ("Pay 1 Blood: ..."). A Creature that earns a KEEP on
+     * the band that was rolled (or that was paid for) is kept.
+     */
+    internal fun rolled(
+        id: String,
+        kind: Target,
+        before: suspend EffectContext.() -> Unit = {},
+        body: suspend EffectContext.(band: Int, targets: List<PlayerState>) -> Unit,
+    ) = def(id) {
+        before()
+        val keepPrice = card.payToKeepBlood ?: 0
+        if (g.expansion && isCreatureRoll && keepPrice > 0 && pay(keepPrice, "KEEP ${card.name}")) keepCreature()
+        val targets = targets(kind)
+        val total = powerRoll()
+        val band = band(total)
+        // Tell the screens which result of the table applies, so they can show just that one.
+        g.emit(GameEvent.RollOutcome(caster.id, g.catalog.allDefs.getValue(id).name, total, band))
+        if (g.expansion && band in card.keepBands) keepCreature()
+        body(band, targets)
+    }
 
     /** A Power Roll card that just deals fixed damage per band to its targets. */
-    private fun simple(id: String, kind: Target, low: Int, mid: Int, high: Int) =
+    internal fun simple(id: String, kind: Target, low: Int, mid: Int, high: Int) =
         rolled(id, kind) { band, targets -> dmgAll(targets, when (band) { 1 -> low; 2 -> mid; else -> high }) }
 
     init {
@@ -88,7 +100,7 @@ internal object CardEffects {
 
         def("magma-gogs") {
             val pick = chooseOption("Magma Gog's", listOf("3 damage to the foe on your left", "1 damage to each foe"))
-            if (pick == 0) g.leftOf(caster)?.let { dmg(it, 3) } else dmgAll(foes(), 1)
+            if (pick == 0) left()?.let { dmg(it, 3) } else dmgAll(foes(), 1)
         }
 
         def("bleemax-brainiacs") {
@@ -130,9 +142,9 @@ internal object CardEffects {
 
         // ------------------------------------------------------------------ QUALITY
 
-        def("mysterious") { g.rightOf(caster)?.let { dmg(it, distinctGlyphs() + caster.treasures.size) } }
+        def("mysterious") { right()?.let { dmg(it, distinctGlyphs() + caster.treasures.size) } }
 
-        def("boulder-iffic") { foes().forEachIndexed { i, f -> dmg(f, i + 1) } }
+        def("boulder-iffic") { foesFromLeft().forEachIndexed { i, f -> dmg(f, i + 1) } }
 
         def("two-faced") {
             val chosen = choose(g.players.filter { it.alive }, "player to gain a Treasure")
@@ -333,5 +345,8 @@ internal object CardEffects {
             dmgAll(targets, when (band) { 1 -> 1; 2 -> 2; else -> 4 })
             if (band == 3) gainTreasure(caster)
         }
+
+        registerExpansionCards()
     }
 }
+
