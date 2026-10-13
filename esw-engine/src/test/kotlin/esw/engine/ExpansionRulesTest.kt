@@ -153,6 +153,37 @@ class ExpansionRulesTest {
     }
 
     @Test
+    fun sadisticGivesBloodWhenACreatureBlocksIt() {
+        val game = setup(mapOf(0 to listOf("sadistic"), 1 to listOf("king-oberons")), dice = listOf(6, 1), yes = true)
+        game.giveCreature(game.players[1], "bob")
+        round(game)
+        assertTrue(events.any { it is GameEvent.CreatureBlocked && it.player == 1 })
+        assertTrue(events.any { it is GameEvent.BloodChanged && it.player == 0 && it.change == 1 && it.reason == "Sadistic" })
+    }
+
+    @Test
+    fun grizGlowballsCanPayBloodToHitEveryFoe() {
+        val game = setup(
+            mapOf(0 to listOf("griz-glowballs"), 1 to listOf("king-oberons"), 2 to listOf("king-oberons")),
+            dice = listOf(6, 1, 1), yes = true,
+        )
+        game.gainBlood(game.players[0], 2, "test")
+        round(game)
+        val hits = events.filterIsInstance<GameEvent.DamageDealt>().filter { it.source == 0 && it.amount == 3 }
+        assertEquals(setOf(1, 2), hits.map { it.target }.toSet())
+        assertEquals(0, game.players[0].blood)
+    }
+
+    @Test
+    fun aCreatureThatRollsItsKeepResultStaysInPlay() {
+        // Cockatwice keeps on a Power Roll of 1-4; its one Primal die shows a 2.
+        val game = setup(mapOf(0 to listOf("cockatwice"), 1 to listOf("king-oberons")), dice = listOf(2))
+        round(game)
+        assertEquals(listOf("Cockatwice"), game.players[0].creatures.map { it.def.name })
+        assertTrue(events.any { it is GameEvent.CreatureKept && it.player == 0 })
+    }
+
+    @Test
     fun nukionFussionsReactionHurtsTheKiller() {
         // Wizard 2 dies to wizard 1's Scorchia's; the Reaction deals one die (a 4) to wizard 1.
         val game = setup(mapOf(0 to listOf("scorchias"), 1 to listOf("mr-nukion-fussions")), dice = listOf(6, 1, 4))
