@@ -596,10 +596,11 @@ function renderLobby(app) {
 /** Base game, Expansion 1 only, or both decks merged. Only the host can change it. */
 function modePickerHtml() {
   const modes = room.modes || [];
-  if (modes.length < 2) return '';
+  const speed = `<div class="modepick"><label class="muted"><input type="checkbox" id="speedMode" ${room.speed ? 'checked' : ''} ${room.owner ? '' : 'disabled'}> Speed mode: first victory wins the match, and no Dead Wizard cards</label></div>`;
+  if (modes.length < 2) return speed;
   const blurb = { BASE: 'The original 2012 game.', EXPANSION1: 'Only the Expansion 1 cards (Blood, the Standee and Creatures).', MERGED: 'Both card sets shuffled together, with the Expansion 1 rules.' };
   const buttons = modes.map((m) => `<button class="btn ${m.id === room.mode ? '' : 'secondary'}" data-mode="${esc(m.id)}" ${room.owner ? '' : 'disabled'}>${esc(m.label)}</button>`).join('');
-  return `<div class="modepick"><div class="muted">Cards and rules</div><div class="top-actions">${buttons}</div><small class="muted">${esc(blurb[room.mode] || '')}</small></div>`;
+  return `<div class="modepick"><div class="muted">Cards and rules</div><div class="top-actions">${buttons}</div><small class="muted">${esc(blurb[room.mode] || '')}</small></div>${speed}`;
 }
 
 function renderRoom(app) {
@@ -620,6 +621,7 @@ function renderRoom(app) {
   wireTop();
   const ab = $('#addBot'); if (ab) ab.onclick = () => send({ t: 'addBot' });
   const st = $('#start'); if (st) st.onclick = () => send({ t: 'start' });
+  const sp = $('#speedMode'); if (sp) sp.onchange = () => send({ t: 'setSpeed', on: sp.checked });
   document.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => send({ t: 'setMode', mode: b.dataset.mode }); });
   $('#leave').onclick = () => send({ t: 'leaveGame' });
   document.querySelectorAll('[data-remove]').forEach((b) => { b.onclick = () => send({ t: 'removeSeat', seat: Number(b.dataset.remove) }); });

@@ -89,6 +89,23 @@ class RandomGamesTest {
     }
 
     @Test
+    fun speedModeEndsAfterOneVictoryAndHandsOutNoDeadWizardCards() {
+        for (seed in 1..30) {
+            val random = Random(seed)
+            val events = mutableListOf<GameEvent>()
+            val game = Game(catalog, List(2 + seed % 5) { "Wizard ${it + 1}" }, RandomDecisions(random), RandomDice(random), random, speedMode = true) {
+                events.add(it)
+            }
+            val winner = runBlocking { game.playMatch() }
+            assertNotNull(winner)
+            assertEquals(1, game.players[winner].tokens)
+            assertEquals(1, events.filterIsInstance<GameEvent.GameStarted>().size)
+            assertTrue(events.none { it is GameEvent.DeadWizardDrawn })
+            assertNull(game.audit())
+        }
+    }
+
+    @Test
     fun sameSeedPlaysTheSameMatch() {
         val a = mutableListOf<GameEvent>()
         val b = mutableListOf<GameEvent>()
