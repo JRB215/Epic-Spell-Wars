@@ -12,20 +12,21 @@ import java.net.URLEncoder
 
 private fun encode(s: String) = URLEncoder.encode(s, Charsets.UTF_8).replace("+", "%20")
 
-private fun artFolder(type: CardType) = when (type) {
+private fun artFolder(def: CardDef) = when (def.type) {
     CardType.SOURCE -> "Source"
     CardType.QUALITY -> "Quality"
     CardType.DELIVERY -> "Delivery"
     CardType.TREASURE -> "Treasures"
-    CardType.DEAD_WIZARD -> "Graveyards"
-    CardType.WILD_MAGIC -> "Card Back and Wild Card"
+    // Expansion 1's folders have different names from the base game's, and some scan names repeat between the two.
+    CardType.DEAD_WIZARD -> if (def.set == "base") "Graveyards" else "Dead Wizard"
+    CardType.WILD_MAGIC -> if (def.set == "base") "Card Back and Wild Card" else "Wild Magic"
 }
 
 private fun baseName(file: String) = file.substringBeforeLast('.')
 
 /** Where the browser can ask for a card's picture. The server answers 404 if there is no picture for it. */
 fun artUrl(def: CardDef): String? =
-    def.scan?.let { "/art/${encode(artFolder(def.type))}/${encode(baseName(it))}" }
+    def.scan?.let { "/art/${encode(artFolder(def))}/${encode(baseName(it))}" }
 
 fun heroArtUrl(file: String) = "/art/${encode("Character Sheets")}/${encode(baseName(file))}"
 
@@ -38,6 +39,7 @@ fun cardView(def: CardDef, uid: Int? = null): JsonObject = obj(
     "initiative" to def.initiative,
     "countsAsGlyph" to def.countsAsGlyph,
     "text" to def.text,
+    "creature" to def.creature,
     "art" to artUrl(def),
 )
 
@@ -69,6 +71,9 @@ private fun playerView(game: Game, p: PlayerState, viewer: Int, seats: List<Seat
     "tokens" to p.tokens,
     "handCount" to p.hand.size,
     "treasures" to p.treasures.map { cardView(it) },
+    "blood" to p.blood,
+    "creatures" to p.creatures.map { cardView(it) },
+    "standee" to (game.standeeHolder === p),
     "deadCards" to p.deadWizardCards.size,
     "spell" to spellView(p, viewer),
     "acted" to p.acted,
@@ -86,6 +91,10 @@ fun gameView(game: Game, viewer: Int, seats: List<SeatInfo>): JsonObject {
     return obj(
         "game" to game.gameNumber,
         "round" to game.roundNumber,
+        "expansion" to game.expansion,
+        "mode" to game.catalog.mode.name,
+        "standeeHolder" to game.standeeHolder?.id,
+        "poster" to game.poster?.let { cardView(it) },
         "decks" to obj(
             "main" to game.mainDeckSize, "mainDiscard" to game.mainDiscardSize,
             "discardTop" to game.mainDiscardTop?.let { cardView(it) },
@@ -139,6 +148,15 @@ fun describe(e: GameEvent, names: List<String>): String = when (e) {
         if (e.winner == null) "Nobody wins this game." else "${name(names, e.winner)} is the last wizard standing! (${e.tokens} token${if (e.tokens == 1) "" else "s"})"
     is GameEvent.MatchWon -> "${name(names, e.winner)} wins the match!"
     is GameEvent.Info -> e.text
+    is GameEvent.BloodChanged -> "${name(names, e.player)} ${if (e.change > 0) "gains" else "loses"} ${kotlin.math.abs(e.change)} Blood" +
+        " (${e.total}): ${e.reason}."
+    is GameEvent.StandeeMoved ->
+        if (e.player == null) "The Standee goes back to the middle of the table." else "${name(names, e.player)} takes the Standee."
+    is GameEvent.CreatureBlocked ->
+        "${name(names, e.player)}'s ${e.creature} blocks ${e.amount} damage and is discarded."
+    is GameEvent.CreatureKept -> "${name(names, e.player)}'s ${e.creature} stays in play."
+    is GameEvent.CreatureLost -> "${name(names, e.player)}'s ${e.creature} leaves play: ${e.why}."
+    is GameEvent.ReactionTriggered -> "${name(names, e.player)}'s Reaction ${e.card} goes off!"
 }
 
 private fun kind(e: GameEvent) = when (e) {
@@ -165,6 +183,12 @@ private fun kind(e: GameEvent) = when (e) {
     is GameEvent.GameWon -> "gameWon"
     is GameEvent.MatchWon -> "matchWon"
     is GameEvent.Info -> "info"
+    is GameEvent.BloodChanged -> "blood"
+    is GameEvent.StandeeMoved -> "standee"
+    is GameEvent.CreatureBlocked -> "creatureBlocked"
+    is GameEvent.CreatureKept -> "creatureKept"
+    is GameEvent.CreatureLost -> "creatureLost"
+    is GameEvent.ReactionTriggered -> "reaction"
 }
 
 /** The facts the screen needs to animate an event. */
@@ -187,6 +211,12 @@ fun eventView(e: GameEvent, names: List<String>): JsonObject {
         is GameEvent.Healed -> { base["player"] = e.player; base["amount"] = e.amount }
         is GameEvent.TreasureGained -> { base["player"] = e.player; base["treasure"] = e.treasure; base["from"] = e.from }
         is GameEvent.PlayerDied -> base["player"] = e.player
+        is GameEvent.BloodChanged -> { base["player"] = e.player; base["change"] = e.change; base["total"] = e.total }
+        is GameEvent.StandeeMoved -> base["player"] = e.player
+        is GameEvent.CreatureBlocked -> { base["player"] = e.player; base["creature"] = e.creature; base["amount"] = e.amount }
+        is GameEvent.CreatureKept -> { base["player"] = e.player; base["creature"] = e.creature }
+        is GameEvent.CreatureLost -> { base["player"] = e.player; base["creature"] = e.creature }
+        is GameEvent.ReactionTriggered -> { base["player"] = e.player; base["card"] = e.card }
         is GameEvent.GameWon -> { base["winner"] = e.winner; base["tokens"] = e.tokens }
         is GameEvent.MatchWon -> base["winner"] = e.winner
         is GameEvent.SpellsLocked -> base["spells"] = e.spells.map {

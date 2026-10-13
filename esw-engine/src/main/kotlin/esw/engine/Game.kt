@@ -57,7 +57,8 @@ class Game(
         private set
 
     /** Most Wanted Poster: a Treasure lying in the middle of the table until someone slays a foe. */
-    internal var poster: CardInstance? = null
+    var poster: CardInstance? = null
+        internal set
 
     /** The first wizard slain this game (Classy in Repose asks about it). */
     private var firstKilled: PlayerState? = null

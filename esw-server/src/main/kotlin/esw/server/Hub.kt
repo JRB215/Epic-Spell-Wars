@@ -1,6 +1,7 @@
 package esw.server
 
 import esw.model.CardCatalog
+import esw.model.GameMode
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import org.springframework.beans.factory.annotation.Value
@@ -28,7 +29,7 @@ class Hub(
     @Value("\${esw.pace:1.0}") pace: Double,
 ) {
     val assets = File(assetsPath)
-    private val services = RoomServices(CardCatalog.loadBase(), Leaderboard(File(assets, "leaderboard.json")), pace)
+    private val services = RoomServices(GameMode.entries.associateWith { CardCatalog.load(it) }, Leaderboard(File(assets, "leaderboard.json")), pace)
     private val rooms = ConcurrentHashMap<String, Room>()
     private val clients = ConcurrentHashMap<String, Client>()
     private val watcher = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "esw-watcher").apply { isDaemon = true } }
@@ -120,6 +121,10 @@ class Hub(
                     room.broadcastRoom()
                     broadcastLobby()
                 }
+            }
+            "setMode" -> if (room != null && room.ownerKey == client.key) {
+                val wanted = GameMode.entries.firstOrNull { it.name == msg.string("mode") }
+                if (wanted != null && room.setMode(wanted)) room.broadcastRoom().also { broadcastLobby() }
             }
             "start" -> if (room != null && room.ownerKey == client.key) {
                 room.start()?.let { error(client, it) }
