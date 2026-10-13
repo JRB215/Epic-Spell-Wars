@@ -14,6 +14,7 @@ internal class GameEnded(val winner: PlayerState?) : RuntimeException(null, null
 
 private const val HAND_SIZE = 8
 private const val TOKENS_TO_WIN = 2
+private const val TOKENS_TO_WIN_IN_SPEED_MODE = 1
 private const val MAX_ROUNDS_PER_GAME = 300
 private const val MAX_GAMES_PER_MATCH = 60
 private const val MAX_BLOOD = 25
@@ -29,6 +30,8 @@ class Game(
     internal val decisions: Decisions,
     internal val dice: Dice,
     internal val random: Random,
+    /** Speed mode: the first Last Wizard Standing token wins the match, and no Dead Wizard cards are handed out. */
+    val speedMode: Boolean = false,
     private val sink: (GameEvent) -> Unit = {},
 ) {
     val players: List<PlayerState>
@@ -51,6 +54,8 @@ class Game(
 
     /** True when the Expansion 1 rules (Blood, the Standee, Creatures, Reactions) are in play. */
     val expansion: Boolean get() = catalog.mode.expansionRules
+
+    private val tokensToWin: Int get() = if (speedMode) TOKENS_TO_WIN_IN_SPEED_MODE else TOKENS_TO_WIN
 
     /** Who holds the Standee, or null while it sits in the middle of the table. A dead wizard can hold it. */
     var standeeHolder: PlayerState? = null
@@ -142,11 +147,11 @@ class Game(
     suspend fun playMatch(): Int? {
         emit(GameEvent.MatchStarted(players.map { it.name }))
         var games = 0
-        while (players.none { it.tokens >= TOKENS_TO_WIN } && games < MAX_GAMES_PER_MATCH) {
+        while (players.none { it.tokens >= tokensToWin } && games < MAX_GAMES_PER_MATCH) {
             games++
             playGame()
         }
-        val winner = players.firstOrNull { it.tokens >= TOKENS_TO_WIN }
+        val winner = players.firstOrNull { it.tokens >= tokensToWin }
         if (winner != null) emit(GameEvent.MatchWon(winner.id))
         return winner?.id
     }
@@ -913,6 +918,7 @@ class Game(
 
     /** Used by dying wizards and by Midnight Merlin's. Backlash from Beyond hits at once. */
     internal suspend fun drawDeadWizardQuietly(p: PlayerState) {
+        if (speedMode) return
         val card = drawDeadWizardCard() ?: return
         emit(GameEvent.DeadWizardDrawn(p.id, card.def.name))
         if (card.def.id == "backlash-from-beyond") {

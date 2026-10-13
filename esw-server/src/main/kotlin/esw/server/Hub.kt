@@ -122,6 +122,10 @@ class Hub(
                     broadcastLobby()
                 }
             }
+            "setSpeed" -> if (room != null && room.ownerKey == client.key && room.setSpeed(msg.bool("on") == true)) {
+                room.broadcastRoom()
+                broadcastLobby()
+            }
             "setMode" -> if (room != null && room.ownerKey == client.key) {
                 val wanted = GameMode.entries.firstOrNull { it.name == msg.string("mode") }
                 if (wanted != null && room.setMode(wanted)) room.broadcastRoom().also { broadcastLobby() }

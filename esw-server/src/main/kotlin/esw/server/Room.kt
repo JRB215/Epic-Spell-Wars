@@ -79,6 +79,17 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
     @Volatile var mode = GameMode.BASE
         private set
 
+    /** Speed mode: first victory wins the match, and no Dead Wizard cards. */
+    @Volatile var speed = false
+        private set
+
+    @Synchronized
+    fun setSpeed(on: Boolean): Boolean {
+        if (state != RoomState.LOBBY) return false
+        speed = on
+        return true
+    }
+
     @Synchronized
     fun setMode(newMode: GameMode): Boolean {
         if (state != RoomState.LOBBY || newMode !in services.catalogs) return false
@@ -151,6 +162,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         "state" to state,
         "max" to maxPlayers,
         "mode" to mode.name,
+        "speed" to speed,
         "modes" to services.catalogs.keys.map { mapOf("id" to it.name, "label" to it.label) },
         "owner" to (forKey != null && forKey == ownerKey),
         "you" to seatOf(forKey ?: "")?.index,
@@ -165,7 +177,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
     }
 
     fun summary(): JsonObject = obj(
-        "id" to id, "title" to title, "state" to state, "max" to maxPlayers, "mode" to mode.label,
+        "id" to id, "title" to title, "state" to state, "max" to maxPlayers, "mode" to mode.label + if (speed) ", speed mode" else "",
         "players" to seats.map { it.name }, "humans" to humans().size,
     )
 
@@ -180,7 +192,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         lastStates.clear()
         val random = Random(System.nanoTime())
         val names = seats.map { it.name }
-        val engine = Game(services.catalogs.getValue(mode), names, HumanDecisions(random), RandomDice(random), random) { event -> onEvent(event, names) }
+        val engine = Game(services.catalogs.getValue(mode), names, HumanDecisions(random), RandomDice(random), random, speedMode = speed) { event -> onEvent(event, names) }
         game = engine
         broadcastRoom()
         gameThread = thread(name = "game-$id", isDaemon = true) {
