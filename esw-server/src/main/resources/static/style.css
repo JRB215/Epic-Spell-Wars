@@ -372,3 +372,14 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 @keyframes floatup { 0% { opacity: 0; margin-top: 10px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -80px; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
 @keyframes cubeSpin { from { transform: rotateX(0) rotateY(0) rotateZ(0); } to { transform: rotateX(720deg) rotateY(540deg) rotateZ(180deg); } }
+
+/* Expansion 1: Blood, the Standee and Creatures */
+.xrow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+.bloodtag, .stdtag { display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; padding: 1px 8px 1px 3px; border-radius: 99px; cursor: help; }
+.bloodtag { background: #4a0d12; border: 1px solid #c0262e; color: #ffd6d8; }
+.stdtag { background: #2a1a4a; border: 1px solid #a07cff; color: #e5d9ff; }
+.bloodtag img, .stdtag img { height: 18px; width: auto; display: block; }
+.chip.creature { background: #1d4a2a; border-color: #5fd37f; color: #d6ffe1; }
+.float.blood { color: #ff2f3d; font-size: 1.8rem; }
+.modepick { margin-top: 14px; }
+.modepick .top-actions { margin: 6px 0; flex-wrap: wrap; }
