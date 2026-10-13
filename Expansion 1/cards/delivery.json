@@ -1,0 +1,653 @@
+{
+  "deck": "DELIVERY",
+  "set": "expansion1",
+  "copiesEach": 2,
+  "note": "Text is copied from the owner's scans of Expansion 1. Every Delivery here is a Creature. A row with keep=true means the card stays in play (KEEP) on that result; Fatcula! keeps only if its owner pays 1 Blood. Initiative numbers are as printed: 13 and 16 appear twice, 4 and 15 not at all.",
+  "cards": [
+    {
+      "id": "bob",
+      "name": "Bob",
+      "glyph": "ILLUSION",
+      "creature": true,
+      "initiative": 5,
+      "scan": "EX1_0068.png",
+      "text": "Target: Foe with the most Blood. Roll Power. 1-4: Steal 1 Blood from the target 5-9: 1 damage, and steal 1 Blood from the target 10+: 4 damage, and steal 1 Blood from the target. KEEP",
+      "roll": {
+        "target": "Foe with the most Blood",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "Steal 1 Blood from the target",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "1 damage, and steal 1 Blood from the target",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage, and steal 1 Blood from the target.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "rock-n-roller",
+      "name": "Rock-N-Roller",
+      "glyph": "ELEMENTAL",
+      "creature": true,
+      "initiative": 7,
+      "scan": "EX1_0069.png",
+      "text": "Target: Strongest foe. Roll Power. 1-4: 1 damage 5-9: 2 damage 10+: 1d6 Damage. KEEP",
+      "roll": {
+        "target": "Strongest foe",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "1d6 Damage.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "draggen",
+      "name": "Draggen",
+      "glyph": "ELEMENTAL",
+      "creature": true,
+      "initiative": 2,
+      "scan": "EX1_0070.png",
+      "text": "Target: Foe who already acted this round. Roll Power. 1-4: 1 damage 5-9: 3 damage 10+: 3 damage, and 3 damage to each foe with a Last Wizard Standing token. KEEP",
+      "roll": {
+        "target": "Foe who already acted this round",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "3 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "3 damage, and 3 damage to each foe with a Last Wizard Standing token.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "land-shark",
+      "name": "Land Shark",
+      "glyph": "PRIMAL",
+      "creature": true,
+      "initiative": 13,
+      "scan": "EX1_0071.png",
+      "text": "Target: Foe with the Standee. Roll Power. 1-4: 1 damage 5-9: 2 damage, and you take the Standee 10+: 5 damage, and you take the Standee. KEEP",
+      "roll": {
+        "target": "Foe with the Standee",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage, and you take the Standee",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "5 damage, and you take the Standee.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "baron-squirrlington",
+      "name": "Baron Squirrlington",
+      "glyph": "PRIMAL",
+      "creature": true,
+      "initiative": 18,
+      "scan": "EX1_0072.png",
+      "text": "Target: Foe with the most Blood. Roll Power. 1-4: No effect 5-9: 2 damage 10+: 4 damage, and you heal 2 HP. KEEP",
+      "roll": {
+        "target": "Foe with the most Blood",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "No effect",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage, and you heal 2 HP.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "mecha-satana",
+      "name": "Mecha-Satana",
+      "glyph": "DARK",
+      "creature": true,
+      "initiative": 3,
+      "scan": "EX1_0073.png",
+      "text": "Target: Weakest foe. Roll Power. 1-4: 1 damage 5-9: 2 damage, and you take 1 damage 10+: 4 damage, then deal 2 damage to your strongest foe. KEEP",
+      "roll": {
+        "target": "Weakest foe",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage, and you take 1 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage, then deal 2 damage to your strongest foe.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "bung-burner",
+      "name": "Bung Burner",
+      "glyph": "ELEMENTAL",
+      "creature": true,
+      "initiative": 9,
+      "scan": "EX1_0074.png",
+      "text": "Target: Foe with the most Blood. Roll Power. 1-4: 2 damage 5-9: 3 damage 10+: 4 damage. KEEP",
+      "roll": {
+        "target": "Foe with the most Blood",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "3 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "sexsquatch",
+      "name": "Sexsquatch",
+      "glyph": "PRIMAL",
+      "creature": true,
+      "initiative": 8,
+      "scan": "EX1_0075.png",
+      "text": "Target: One foe who already acted this round. Roll Power. 1-4: 2 damage 5-9: 3 damage 10+: 4 damage, and 1 damage to each other foe. KEEP",
+      "roll": {
+        "target": "One foe who already acted this round",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "3 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage, and 1 damage to each other foe.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "fatcula",
+      "name": "Fatcula!",
+      "glyph": "DARK",
+      "creature": true,
+      "initiative": 13,
+      "scan": "EX1_0076.png",
+      "text": "Pay 1 Blood: KEEP. Target: Strongest foe. Roll Power. 1-4: 1 damage 5-9: 2 damage 10+: 4 damage",
+      "payToKeep": {
+        "blood": 1
+      },
+      "roll": {
+        "target": "Strongest foe",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage",
+            "keep": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "shub-niggurath",
+      "name": "Shub-Niggurath",
+      "glyph": "DARK",
+      "creature": true,
+      "initiative": 6,
+      "scan": "EX1_0077.png",
+      "text": "Pay 1 Blood: Add one die to each of your Creature Power Rolls this turn. Target: Foe who already acted this round. Roll Power. 1-4: No effect 5-9: 1 damage 10+: 2 damage, and play another Creature from your hand. KEEP",
+      "preface": "Pay 1 Blood: Add one die to each of your Creature Power Rolls this turn.",
+      "roll": {
+        "target": "Foe who already acted this round",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "No effect",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "2 damage, and play another Creature from your hand.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "tentakiller",
+      "name": "Tentakiller",
+      "glyph": "ILLUSION",
+      "creature": true,
+      "initiative": 16,
+      "scan": "EX1_0078.png",
+      "text": "Target: One foe with no Creatures in play. Roll Power. 1-4: 1 damage 5-9: 2 damage. KEEP 10+: 3 damage, and steal a Treasure from the target",
+      "roll": {
+        "target": "One foe with no Creatures in play",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage.",
+            "keep": true
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "3 damage, and steal a Treasure from the target",
+            "keep": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "cockatwice",
+      "name": "Cockatwice",
+      "glyph": "PRIMAL",
+      "creature": true,
+      "initiative": 10,
+      "scan": "EX1_0079.png",
+      "text": "Target: Strongest foe. Roll Power. 1-4: KEEP 5-9: 2 damage 10+: 4 damage",
+      "roll": {
+        "target": "Strongest foe",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "",
+            "keep": true
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage",
+            "keep": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "fart-knight",
+      "name": "Fart Knight",
+      "glyph": "ILLUSION",
+      "creature": true,
+      "initiative": 20,
+      "scan": "EX1_0080.png",
+      "text": "Pay 2 Blood: You may resolve each of your Power dice individually and against different foes. Target: Foe of your choice. Roll Power. 1-4: 1 damage. KEEP 5-9: 2 damage 10+: 4 damage",
+      "preface": "Pay 2 Blood: You may resolve each of your Power dice individually and against different foes.",
+      "roll": {
+        "target": "Foe of your choice",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage.",
+            "keep": true
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage",
+            "keep": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "shpider-moonkey",
+      "name": "Shpider-Moonkey",
+      "glyph": "ARCANE",
+      "creature": true,
+      "initiative": 17,
+      "scan": "EX1_0081.png",
+      "text": "Target: Foe on your right. Roll Power. 1-4: 1 damage 5-9: 2 damage 10+: 4 damage, and you gain 1 Blood. KEEP",
+      "roll": {
+        "target": "Foe on your right",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage, and you gain 1 Blood.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "carnivorous-clowns",
+      "name": "Carnivorous Clowns",
+      "glyph": "DARK",
+      "creature": true,
+      "initiative": 16,
+      "scan": "EX1_0082.png",
+      "text": "Target: Foe with the most Creatures in play. Roll Power. 1-4: You take 1 damage 5-9: Kill 1 of the target's Creatures, and then do 3 damage 10+: 4 damage. KEEP",
+      "roll": {
+        "target": "Foe with the most Creatures in play",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "You take 1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "Kill 1 of the target's Creatures, and then do 3 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "pimped-imps",
+      "name": "Pimped Imps",
+      "glyph": "ILLUSION",
+      "creature": true,
+      "initiative": 19,
+      "scan": "EX1_0083.png",
+      "text": "Target: Weakest foe. Roll Power. 1-4: All foes heal 1 HP 5-9: 3 damage. KEEP 10+: 5 damage, and each other foe heals 1 HP",
+      "roll": {
+        "target": "Weakest foe",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "All foes heal 1 HP",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "3 damage.",
+            "keep": true
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "5 damage, and each other foe heals 1 HP",
+            "keep": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "bitch-witch",
+      "name": "Bitch Witch",
+      "glyph": "ARCANE",
+      "creature": true,
+      "initiative": 14,
+      "scan": "EX1_0084.png",
+      "text": "Target: Foe with the most Blood. Roll Power. 1-4: 1 damage 5-9: 2 damage, and that foe loses 1 Blood 10+: 3 damage, and that foe loses 2 Blood. KEEP",
+      "roll": {
+        "target": "Foe with the most Blood",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage, and that foe loses 1 Blood",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "3 damage, and that foe loses 2 Blood.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "jelly-square",
+      "name": "Jelly-Square",
+      "glyph": "ARCANE",
+      "creature": true,
+      "initiative": 12,
+      "scan": "EX1_0085.png",
+      "text": "Target: Foe on your left. Roll Power. 1-4: 2 damage 5-9: 3 damage 10+: 4 damage, and you draw a Treasure. KEEP",
+      "roll": {
+        "target": "Foe on your left",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "3 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "4 damage, and you draw a Treasure.",
+            "keep": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "hand-of-god",
+      "name": "Hand of God!",
+      "glyph": "ARCANE",
+      "creature": true,
+      "initiative": 1,
+      "scan": "EX1_0086.png",
+      "text": "Target: Foe with the most Treasure. Roll Power. 1-4: 1 damage 5-9: 3 damage, and the target must destroy one of their Treasures 10+: 7 damage",
+      "roll": {
+        "target": "Foe with the most Treasure",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "3 damage, and the target must destroy one of their Treasures",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "7 damage",
+            "keep": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "baa-zerker",
+      "name": "Baa-Zerker!",
+      "glyph": "ELEMENTAL",
+      "creature": true,
+      "initiative": 11,
+      "scan": "EX1_0087.png",
+      "text": "Target: One foe who does not have the Standee. Roll Power. 1-4: 1 damage 5-9: 2 damage 10+: 3 damage, or 6 damage if target is last foe. KEEP",
+      "roll": {
+        "target": "One foe who does not have the Standee",
+        "rows": [
+          {
+            "from": 1,
+            "to": 4,
+            "text": "1 damage",
+            "keep": false
+          },
+          {
+            "from": 5,
+            "to": 9,
+            "text": "2 damage",
+            "keep": false
+          },
+          {
+            "from": 10,
+            "to": null,
+            "text": "3 damage, or 6 damage if target is last foe.",
+            "keep": true
+          }
+        ]
+      }
+    }
+  ]
+}

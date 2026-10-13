@@ -1,0 +1,159 @@
+{
+  "deck": "TREASURE",
+  "set": "expansion1",
+  "copiesEach": 1,
+  "note": "Text is copied from the owner's scans of Expansion 1. These Treasures use Blood, the Standee and Creatures, which the engine does not have yet.",
+  "cards": [
+    {
+      "id": "idol-of-the-magic-pussy",
+      "name": "Idol of the Magic Pussy",
+      "scan": "EX1_0001.png",
+      "text": "Take the Standee. Whenever you score Blood for having the Standee at the end of a round, gain one additional Blood."
+    },
+    {
+      "id": "triple-barrel-shotgun",
+      "name": "Triple Barrel Shotgun",
+      "scan": "EX1_0002.png",
+      "text": "For every 3 matching glyphs in your spell, gain 1 Blood."
+    },
+    {
+      "id": "the-golden-handcuffs",
+      "name": "The Golden Handcuffs",
+      "scan": "EX1_0003.png",
+      "text": "When you are the last Wizard to act in a round, draw a Treasure."
+    },
+    {
+      "id": "fate-coins",
+      "name": "Fate Coins",
+      "scan": "EX1_0004.png",
+      "text": "When you get this Treasure, name the next Wizard you believe will be slain. If you are correct, gain 2 Blood, even if you guessed yourself."
+    },
+    {
+      "id": "snerds-rage",
+      "name": "Snerds Rage",
+      "scan": "EX1_0005.png",
+      "text": "Pay 3 Blood: Heal 2 HP"
+    },
+    {
+      "id": "first-loser-trophy",
+      "name": "First Loser Trophy",
+      "scan": "EX1_0006.png",
+      "text": "If your death ends this game, you gain 3 Blood. Pay 1 Blood: Heal 1 HP (Use only once per round.)"
+    },
+    {
+      "id": "cheaters-dice",
+      "name": "Cheater's Dice",
+      "scan": "EX1_0007.png",
+      "text": "Reroll any 1's you roll with Power rolls."
+    },
+    {
+      "id": "the-naughty-list",
+      "name": "The Naughty List",
+      "scan": "EX1_0008.png",
+      "text": "Gain 1 additional Blood each time you slay a foe."
+    },
+    {
+      "id": "the-i-cant-believe-this-shit",
+      "name": "The \"I Can't Believe This\" Shit",
+      "scan": "EX1_0009.png",
+      "text": "Each time a foe draws a Dead Wizard card, roll one die. If you roll a 5 or a 6, heal 1 HP."
+    },
+    {
+      "id": "deadmans-switch",
+      "name": "Deadman's Switch",
+      "scan": "EX1_0010.png",
+      "text": "When you are the sole target of a foe's spell you may pay 3 Blood. If you do, switch the target to another foe, but not the Wizard attacking you."
+    },
+    {
+      "id": "gluttons-regalia",
+      "name": "Glutton's Regalia",
+      "scan": "EX1_0011.png",
+      "text": "When you gain this Treasure, choose a Source, Quality, or Delivery from your hand and put it slightly under this card. Count that card's glyph in each of your spells.",
+      "countsGlyphOfChosenCard": true
+    },
+    {
+      "id": "the-sausage-masters-steed",
+      "name": "The Sausage Master's Steed",
+      "scan": "EX1_0012.png",
+      "text": "Each time you roll 13+ with a Power roll, gain 1 Blood."
+    },
+    {
+      "id": "monster-baby",
+      "name": "Monster Baby",
+      "scan": "EX1_0013.png",
+      "text": "When you gain this Treasure, deal 1 damage to each Wizard (including you). Then gain 2 Blood for each Wizard who has 5 or fewer HP. Pay 4 Blood: Deal 2 damage to any foe."
+    },
+    {
+      "id": "the-globe-of-sacrifice",
+      "name": "The Globe of Sacrifice",
+      "scan": "EX1_0014.png",
+      "text": "Pay 2 Blood: Re-roll one die."
+    },
+    {
+      "id": "fish-hands",
+      "name": "Fish Hands!",
+      "scan": "EX1_0015.png",
+      "text": "If you are the first player to act in a round, swap this Treasure for any Treasure belonging to a foe."
+    },
+    {
+      "id": "wolf-cookie",
+      "name": "Wolf Cookie",
+      "scan": "EX1_0016.png",
+      "text": "Whenever one of your Creatures deals damage with a Power roll, add 1 to that damage."
+    },
+    {
+      "id": "gang-bang-a-gong",
+      "name": "Gang Bang-a-Gong",
+      "scan": "EX1_0017.png",
+      "text": "Pay 2 Blood: Deal 1 damage to target foe for every 5 Hit Points she has. (i.e. a foe with 14 HP takes 2 damage)"
+    },
+    {
+      "id": "dr-shrinkys-couch",
+      "name": "Dr. Shrinky's Couch",
+      "scan": "EX1_0018.png",
+      "text": "When you play a Wild Magic card, reveal cards until you find two cards of the type you're looking for and add them both to your spell."
+    },
+    {
+      "id": "the-f-u-suit",
+      "name": "The F-U Suit",
+      "scan": "EX1_0019.png",
+      "text": "If you are the weakest Wizard at the end of a round (or tied), you heal 2 HP and draw a Treasure."
+    },
+    {
+      "id": "most-wanted-poster",
+      "name": "Most Wanted Poster",
+      "scan": "EX1_0020.png",
+      "text": "Place this Treasure in the center of the table, and then draw another Treasure. The next player to slay a foe discards this card and gains 3 Blood."
+    },
+    {
+      "id": "steer-roids",
+      "name": "Steer-Roids!",
+      "scan": "EX1_0021.png",
+      "text": "After resolving a Creature component of your spell, you may pay 3 Blood. If you do, KEEP your Creature instead of discarding it."
+    },
+    {
+      "id": "grabbel-snaks-6-headed-tape-worm",
+      "name": "Grabbel-Snak's 6-Headed Tape Worm",
+      "scan": "EX1_0022.png",
+      "text": "If you are tied for Initiative with other players, you may pay 1 Blood. If you do, you break the tie and resolve your spell first."
+    },
+    {
+      "id": "manuel-decryptozoic",
+      "name": "Manuel De'Cryptozoic",
+      "scan": "EX1_0023.png",
+      "text": "Once during each of your turns, you may reroll a Creature's Power roll. Stick with the reroll even if it's worse."
+    },
+    {
+      "id": "double-headed-ding-donger",
+      "name": "Double-Headed Ding-Donger",
+      "scan": "EX1_0024.png",
+      "text": "When you use a card or attack that goes left, you can choose to go right instead, and vice versa. If you reverse one direction on a card reverse them all."
+    },
+    {
+      "id": "cod-piece-of-cthulhu",
+      "name": "Cod Piece of Cthulhu",
+      "scan": "EX1_0025.png",
+      "text": "At the start of each of your turns, steal 1 Blood from any one foe."
+    }
+  ]
+}
