@@ -25,9 +25,9 @@ internal class EffectContext(
 
     fun foes(): List<PlayerState> = g.foesOf(caster)
 
-    fun dmg(target: PlayerState, amount: Int) = g.damage(target, amount, caster)
+    suspend fun dmg(target: PlayerState, amount: Int) = g.damage(target, amount, caster)
 
-    fun dmgAll(targets: List<PlayerState>, amount: Int) { for (t in targets) dmg(t, amount) }
+    suspend fun dmgAll(targets: List<PlayerState>, amount: Int) { for (t in targets) dmg(t, amount) }
 
     fun heal(target: PlayerState, amount: Int) = g.heal(target, amount)
 

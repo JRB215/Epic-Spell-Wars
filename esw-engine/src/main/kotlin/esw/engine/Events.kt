@@ -7,6 +7,25 @@ data class RevealedCard(val def: CardDef, val kept: Boolean)
 
 /** Things that happened, in order. The server turns these into screen animations and a game log. */
 sealed interface GameEvent {
+    // ---- Expansion 1 ----
+    /** A wizard's Blood changed by [change] (negative when spent or stolen) and is now [total]. */
+    data class BloodChanged(val player: Int, val change: Int, val total: Int, val reason: String) : GameEvent
+
+    /** The Standee moved to [player], or back to the middle of the table when it is null. */
+    data class StandeeMoved(val player: Int?) : GameEvent
+
+    /** A wizard discarded a kept Creature to cancel [amount] damage from [from]. */
+    data class CreatureBlocked(val player: Int, val creature: String, val amount: Int, val from: Int?) : GameEvent
+
+    /** A Creature stays in play in front of its owner. */
+    data class CreatureKept(val player: Int, val creature: String) : GameEvent
+
+    /** A Creature left play (killed, discarded or lost when its owner died). */
+    data class CreatureLost(val player: Int, val creature: String, val why: String) : GameEvent
+
+    /** A Reaction card in a dying wizard's spell went off. */
+    data class ReactionTriggered(val player: Int, val card: String) : GameEvent
+
     /** A wizard's turn is over: the cards their spell ended up with (including any added), kept for the round recap. */
     data class SpellFinished(val player: Int, val cards: List<CardDef>) : GameEvent
     /** Cards were turned over from the top of the Main Deck by [by] (a card name), so everyone can see them. */

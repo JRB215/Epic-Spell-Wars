@@ -16,6 +16,7 @@ private const val HAND_SIZE = 8
 private const val TOKENS_TO_WIN = 2
 private const val MAX_ROUNDS_PER_GAME = 300
 private const val MAX_GAMES_PER_MATCH = 60
+private const val MAX_BLOOD = 25
 
 /**
  * One match of Epic Spell Wars: games are played until a wizard has two Last Wizard Standing tokens.
@@ -48,6 +49,22 @@ class Game(
 
     val maxHp: Int get() = catalog.maxHp
 
+    /** True when the Expansion 1 rules (Blood, the Standee, Creatures, Reactions) are in play. */
+    val expansion: Boolean get() = catalog.mode.expansionRules
+
+    /** Who holds the Standee, or null while it sits in the middle of the table. A dead wizard can hold it. */
+    var standeeHolder: PlayerState? = null
+        private set
+
+    /** Most Wanted Poster: a Treasure lying in the middle of the table until someone slays a foe. */
+    internal var poster: CardInstance? = null
+
+    /** The first wizard slain this game (Classy in Repose asks about it). */
+    private var firstKilled: PlayerState? = null
+
+    /** Who won the Last Wizard Standing token last game (Lingering Curse targets them). */
+    private var lastGameWinner: PlayerState? = null
+
     /** The card on top of the discard pile, face up for everyone to see. */
     val mainDiscardTop: CardInstance? get() = mainDiscard.lastOrNull()
 
@@ -68,6 +85,55 @@ class Game(
     private fun newCard(def: CardDef) = CardInstance(nextUid++, def)
 
     internal fun emit(event: GameEvent) = sink(event)
+
+    // ------------------------------------------------------------------ Blood and the Standee (Expansion 1)
+
+    /** Adds Blood, up to 25. Does nothing in the base game. */
+    internal fun gainBlood(p: PlayerState, amount: Int, reason: String) {
+        if (!expansion || amount <= 0) return
+        val gained = minOf(amount, MAX_BLOOD - p.blood)
+        if (gained <= 0) return
+        p.blood += gained
+        emit(GameEvent.BloodChanged(p.id, gained, p.blood, reason))
+    }
+
+    /** Removes up to [amount] Blood and returns how much was actually taken. */
+    internal fun loseBlood(p: PlayerState, amount: Int, reason: String): Int {
+        val lost = minOf(amount, p.blood)
+        if (lost <= 0) return 0
+        p.blood -= lost
+        emit(GameEvent.BloodChanged(p.id, -lost, p.blood, reason))
+        return lost
+    }
+
+    internal fun stealBlood(thief: PlayerState, victim: PlayerState, amount: Int) {
+        val taken = loseBlood(victim, amount, "stolen by ${thief.name}")
+        gainBlood(thief, taken, "stolen from ${victim.name}")
+    }
+
+    /** Asks the wizard whether to pay [cost] Blood for [what]. Returns true if they paid. Free of cost when it cannot be paid. */
+    internal suspend fun payBlood(p: PlayerState, cost: Int, what: String): Boolean {
+        if (!expansion || cost <= 0 || p.blood < cost) return false
+        if (!decisions.chooseYesNo(p.id, "Pay $cost Blood: $what?")) return false
+        loseBlood(p, cost, what)
+        return true
+    }
+
+    /** A Blood payment on a Treasure: once per round, only on the owner's turn. */
+    internal suspend fun payForTreasure(p: PlayerState, treasure: CardInstance, cost: Int, what: String): Boolean {
+        if (!expansion || treasure.uid in p.paidThisRound || p.blood < cost) return false
+        if (!payBlood(p, cost, what)) return false
+        p.paidThisRound.add(treasure.uid)
+        return true
+    }
+
+    internal fun takeStandee(p: PlayerState) {
+        if (!expansion || standeeHolder === p) return
+        standeeHolder = p
+        emit(GameEvent.StandeeMoved(p.id))
+    }
+
+    internal fun hasStandee(p: PlayerState) = expansion && standeeHolder === p
 
     // ------------------------------------------------------------------ match / game / round
 
@@ -98,8 +164,30 @@ class Game(
             emit(GameEvent.Info("Nobody won game $gameNumber after $MAX_ROUNDS_PER_GAME rounds"))
         } catch (ended: GameEnded) {
             winner = ended.winner
+            // The round ends along with the game, so the Standee still pays out its Blood.
+            try { endOfRound() } catch (_: GameEnded) { /* nothing left to decide */ }
         }
         endGame(winner)
+    }
+
+    private var roundClosed = false
+
+    /** What happens when a round is over (Expansion 1 only). It runs once per round, even if the game ends first. */
+    private suspend fun endOfRound() {
+        if (!expansion || roundClosed) return
+        roundClosed = true
+        val living = players.filter { it.alive }
+        for (p in living) {
+            if (p.has("the-f-u-suit") && p.hp == living.minOf { it.hp }) {
+                heal(p, 2)
+                gainTreasure(p)
+            }
+        }
+        standeeHolder?.let { h ->
+            val gain = if (!h.alive && h.deadWizardCards.any { it.def.id == "grave-terrain" }) 4 else 1
+            gainBlood(h, gain, "holding the Standee")
+            if (h.has("idol-of-the-magic-pussy")) gainBlood(h, 1, "Idol of the Magic Pussy")
+        }
     }
 
     private suspend fun startGame() {
@@ -114,10 +202,16 @@ class Game(
             p.bonusDie = null
             p.extraStartingCards = 0
             p.hp = catalog.startingHp
+            p.prediction = null
+            p.zapThisGame = 0
+            p.startHandPenalty = 0
+            p.paidThisRound.clear()
+            p.rerolledCreatureThisTurn = false
         }
         pendingBacklash.clear()
         // Dead Wizard cards collected last game give their bonuses now, then are discarded.
         val treasuresToGain = mutableMapOf<PlayerState, Int>()
+        val petsToReveal = mutableListOf<PlayerState>()
         for (p in players) {
             var slagDice = 0
             for (c in p.deadWizardCards) {
@@ -127,7 +221,16 @@ class Game(
                     "afterlife-artifact" -> treasuresToGain.merge(p, 1, Int::plus)
                     "slag-shangri-la" -> slagDice++
                     "pixie-paradise" -> p.extraStartingCards += 2
+                    // Expansion 1 cards that work at the start of the next game
+                    "pet-from-beyond" -> petsToReveal.add(p)
+                    "hounds-from-hell" -> p.houndsDice++
+                    "zap-o-rama" -> p.zapThisGame++
+                    "lingering-curse" -> lastGameWinner?.let { it.startHandPenalty += 2 }
                 }
+            }
+            if (p.treasureNextGame > 0) {
+                treasuresToGain.merge(p, p.treasureNextGame, Int::plus)
+                p.treasureNextGame = 0
             }
             if (slagDice > 0) {
                 // Slag Shangri-La: each card puts a die on the character card. They are rolled now, shown to
@@ -140,9 +243,37 @@ class Game(
             deadDiscard.addAll(p.deadWizardCards); p.deadWizardCards.clear()
         }
         for ((p, n) in treasuresToGain) repeat(n) { gainTreasure(p) }
+        for (p in petsToReveal) startWithCreature(p)
+    }
+
+    /** Pet from Beyond: reveal cards until a Creature turns up, and the wizard starts the game with it in play. */
+    private fun startWithCreature(p: PlayerState) {
+        val aside = mutableListOf<CardInstance>()
+        var found: CardInstance? = null
+        while (true) {
+            val c = drawMain() ?: break
+            if (c.def.creature) { found = c; break } else aside.add(c)
+        }
+        mainDiscard.addAll(aside)
+        val shown = aside.map { RevealedCard(it.def, false) } + listOfNotNull(found?.let { RevealedCard(it.def, true) })
+        if (shown.isNotEmpty()) emit(GameEvent.DeckRevealed(p.id, "Pet from Beyond", shown))
+        found?.let {
+            p.creatures.add(it)
+            emit(GameEvent.CreatureKept(p.id, it.def.name))
+        }
     }
 
     private fun endGame(winner: PlayerState?) {
+        // Creatures and the Standee do not survive the game; Treasures lying in the middle go too.
+        for (p in players) {
+            for (c in p.creatures) { mainDiscard.add(c); emit(GameEvent.CreatureLost(p.id, c.def.name, "the game ended")) }
+            p.creatures.clear()
+            p.regalia?.let { mainDiscard.add(it); p.regalia = null }
+        }
+        poster?.let { treasureDiscard.add(it); poster = null }
+        if (standeeHolder != null) { standeeHolder = null; emit(GameEvent.StandeeMoved(null)) }
+        firstKilled = null
+        lastGameWinner = winner
         for (p in players) {
             discardSpell(p)
             p.spell = null
@@ -165,11 +296,13 @@ class Game(
 
     private suspend fun playRound() {
         emit(GameEvent.RoundStarted(roundNumber))
+        roundClosed = false
         for (p in players) {
             p.acted = false
             p.actLast = false
             p.extraDiceThisRound = 0
             p.spell = null
+            p.paidThisRound.clear()
         }
         val living = players.filter { it.alive }
         for (p in living) {
@@ -204,6 +337,7 @@ class Game(
         }
         // Normally the game ends mid-round. This is only reached if everyone left alive has acted.
         for (p in players) { discardSpell(p); p.spell = null }
+        endOfRound()
         if (players.count { it.alive } <= 1) throw GameEnded(players.firstOrNull { it.alive })
     }
 
@@ -448,12 +582,54 @@ class Game(
 
     // ------------------------------------------------------------------ damage, healing, death
 
-    internal fun damage(target: PlayerState, amount: Int, source: PlayerState?) {
+    /**
+     * A wizard takes damage. [source] is whoever caused it (null if nobody did). In Expansion 1 a face-up Creature can
+     * soak up damage from a foe, and a Reaction can save a wizard who would otherwise die.
+     */
+    internal suspend fun damage(target: PlayerState, amount: Int, source: PlayerState?) {
         if (amount <= 0 || !target.alive) return
-        target.hp = maxOf(0, target.hp - amount)
+        if (expansion && source != null && source !== target && target.creatures.isNotEmpty() &&
+            offerBlock(target, source, amount)
+        ) return
+        val before = target.hp
+        target.hp = maxOf(0, before - amount)
         emit(GameEvent.DamageDealt(target.id, amount, source?.id, target.hp))
-        if (target.hp == 0) die(target)
+        if (target.hp == 0 && !(expansion && reactToDeath(target, source, before))) slay(target, source)
         checkGameEnd()
+    }
+
+    /** Offers the wizard the chance to discard one Creature to cancel this one hit. Returns true if they did. */
+    private suspend fun offerBlock(target: PlayerState, source: PlayerState, amount: Int): Boolean {
+        if (!decisions.chooseYesNo(target.id, "Discard a Creature to cancel $amount damage from ${source.name}?")) return false
+        val creature = if (target.creatures.size == 1) {
+            target.creatures.first()
+        } else {
+            val uid = decisions.chooseTreasure(target.id, target.creatures.toList(), "Creature to discard")
+            target.creatures.firstOrNull { it.uid == uid } ?: error("Invalid Creature choice $uid")
+        }
+        discardCreature(target, creature, "blocked $amount damage")
+        emit(GameEvent.CreatureBlocked(target.id, creature.def.name, amount, source.id))
+        return true
+    }
+
+    /** Takes a Creature out of play and into the discard pile. */
+    internal fun discardCreature(p: PlayerState, creature: CardInstance, why: String) {
+        if (!p.creatures.remove(creature)) return
+        // If it is also sitting in the owner's spell (waiting to attack again), it leaves the spell too.
+        p.spell?.cards?.removeAll { it.fromPlay && it.card === creature }
+        mainDiscard.add(creature)
+        emit(GameEvent.CreatureLost(p.id, creature.def.name, why))
+    }
+
+    /** A Reaction in the dying wizard's unresolved spell goes off. Returns true if one saved them from dying. */
+    private suspend fun reactToDeath(p: PlayerState, killer: PlayerState?, hpBefore: Int): Boolean {
+        val spell = p.spell ?: return false
+        for (sc in spell.cards.toList()) {
+            if (sc.resolved || sc.wild || !sc.card.def.text.contains("Reaction:")) continue
+            emit(GameEvent.ReactionTriggered(p.id, sc.card.def.name))
+            if (ExpansionEffects.reaction(ReactionContext(this, p, killer, sc, hpBefore), sc.card.def.id)) return true
+        }
+        return false
     }
 
     internal fun heal(target: PlayerState, amount: Int) {
@@ -464,10 +640,35 @@ class Game(
         emit(GameEvent.Healed(target.id, healed, target.hp))
     }
 
-    private fun die(p: PlayerState) {
+    /** A wizard dies. [killer] is the wizard whose damage did it (the wizard themselves if they hurt themselves). */
+    private suspend fun slay(p: PlayerState, killer: PlayerState?) {
+        if (expansion) {
+            if (p.has("first-loser-trophy") && livingCount() - 1 <= 1) gainBlood(p, 3, "First Loser Trophy")
+            // Fate Coins: anyone who named this wizard as the next to be slain was right.
+            for (holder in players) {
+                val guess = holder.prediction ?: continue
+                if (holder.has("fate-coins") && guess == p.id) gainBlood(holder, 2, "Fate Coins guessed right")
+                holder.prediction = null
+            }
+            if (firstKilled == null) firstKilled = p
+        }
         p.alive = false
+        if (expansion && killer != null && killer !== p) {
+            gainBlood(killer, 3, "slaying ${p.name}")
+            if (killer.has("the-naughty-list")) gainBlood(killer, 1, "The Naughty List")
+            if (standeeHolder === p) takeStandee(killer)
+            poster?.let {
+                treasureDiscard.add(it)
+                poster = null
+                emit(GameEvent.Info("${killer.name} collects the Most Wanted Poster and gains 3 Blood"))
+                gainBlood(killer, 3, "Most Wanted Poster")
+            }
+        }
         mainDiscard.addAll(p.hand); p.hand.clear()
         treasureDiscard.addAll(p.treasures); p.treasures.clear()
+        p.regalia?.let { mainDiscard.add(it); p.regalia = null }
+        p.spell?.cards?.removeAll { it.fromPlay }
+        for (c in p.creatures.toList()) discardCreature(p, c, "its owner died")
         emit(GameEvent.PlayerDied(p.id))
         drawDeadWizardQuietly(p)
     }
@@ -493,7 +694,8 @@ class Game(
         repeat(count) { drawMain()?.let { p.hand.add(it) } }
     }
 
-    private fun handSizeOf(p: PlayerState) = HAND_SIZE + if (p.has("thinking-cap")) 1 else 0
+    private fun handSizeOf(p: PlayerState) =
+        HAND_SIZE + (if (p.has("thinking-cap")) 1 else 0) - (if (roundNumber == 1) p.startHandPenalty else 0)
 
     private fun drawUpToHandSize(p: PlayerState) {
         while (p.hand.size < handSizeOf(p)) p.hand.add(drawMain() ?: break)
@@ -557,7 +759,7 @@ class Game(
     }
 
     /** Used by dying wizards and by Midnight Merlin's. Backlash from Beyond hits at once. */
-    internal fun drawDeadWizardQuietly(p: PlayerState) {
+    internal suspend fun drawDeadWizardQuietly(p: PlayerState) {
         val card = drawDeadWizardCard() ?: return
         emit(GameEvent.DeadWizardDrawn(p.id, card.def.name))
         if (card.def.id == "backlash-from-beyond") {
@@ -565,6 +767,23 @@ class Game(
             pendingBacklash.add(p)
         } else {
             p.deadWizardCards.add(card)
+            if (expansion && card.def.resolveNow) resolveDeadWizardNow(p, card)
+        }
+    }
+
+    /** Expansion 1 Dead Wizard cards that say "Resolve now" take effect the moment they are drawn. */
+    private fun resolveDeadWizardNow(p: PlayerState, card: CardInstance) {
+        when (card.def.id) {
+            "ex-exsanguination" -> for (w in players.filter { it.alive && it !== p }) stealBlood(p, w, 1)
+            "grave-terrain" -> takeStandee(p)
+            "classy-in-repose" -> {
+                gainBlood(p, 2, "Classy in Repose")
+                if (firstKilled === p) gainBlood(p, 2, "Classy in Repose (first to die)")
+            }
+            "just-rewards" -> {
+                gainBlood(p, players.sumOf { it.tokens }, "Just Rewards")
+                if (p.tokens == 0) p.treasureNextGame++
+            }
         }
     }
 
@@ -688,6 +907,15 @@ class Game(
         return card
     }
 
+    internal fun giveStandeeForTest(p: PlayerState?) { standeeHolder = p }
+
+    /** Puts a brand-new Creature face up in front of a wizard. */
+    internal fun giveCreature(p: PlayerState, defId: String): CardInstance {
+        val card = newCard(catalog.allDefs.getValue(defId))
+        p.creatures.add(card)
+        return card
+    }
+
     internal suspend fun resolveSpellForTest(p: PlayerState) = resolveSpell(p)
 
     internal suspend fun playRoundForTest(): RoundOutcome {
@@ -696,6 +924,7 @@ class Game(
             playRound()
             RoundOutcome(false, null)
         } catch (ended: GameEnded) {
+            try { endOfRound() } catch (_: GameEnded) { /* nothing left to decide */ }
             endGame(ended.winner)
             RoundOutcome(true, ended.winner?.id)
         }
