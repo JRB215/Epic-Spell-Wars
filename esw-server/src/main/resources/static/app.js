@@ -593,6 +593,33 @@ function renderLobby(app) {
   $('#board').innerHTML = lb.length ? lb.map((r, i) => `<div class="lb-row"><span>${i + 1}. ${esc(r.name)}</span><b>${r.wins}</b></div>`).join('') : '<p class="muted">Nobody has won a match yet.</p>';
 }
 
+function heroLabel(seat) {
+  const h = (room.heroes || []).find((x) => x.id === seat.hero);
+  return h ? h.name : 'Random';
+}
+
+/** A grid of every wizard to pick from (or Random). Wizards another seat already took are greyed out. */
+function openHeroPicker(seatIndex) {
+  const seat = room.seats.find((s) => s.index === seatIndex);
+  if (!seat) return;
+  const old = document.getElementById('heropick'); if (old) old.remove();
+  const taken = new Set(room.seats.filter((s) => s.index !== seatIndex && s.hero).map((s) => s.hero));
+  const tiles = (room.heroes || []).map((h) => `<button class="hero-tile ${h.id === seat.hero ? 'on' : ''}" data-h="${esc(h.id)}" ${taken.has(h.id) ? 'disabled' : ''}>
+      <img src="${esc(h.art)}?w=160" alt="" onerror="this.style.visibility='hidden'"><b>${esc(h.name)}</b><small>${esc(h.title || '')}</small></button>`).join('');
+  const box = document.createElement('div');
+  box.id = 'heropick';
+  box.innerHTML = `<div class="heropanel"><h2>Choose ${esc(seat.name)}'s wizard</h2>
+    <div class="herogrid"><button class="hero-tile ${seat.hero ? '' : 'on'}" data-h=""><b>Random</b><small>Draw a wizard at the start</small></button>${tiles}</div>
+    <div class="top-actions"><span class="spacer"></span><button class="btn secondary" id="heroclose">Close</button></div></div>`;
+  document.body.appendChild(box);
+  const close = () => box.remove();
+  box.onclick = (e) => { if (e.target === box) close(); };
+  box.querySelector('#heroclose').onclick = close;
+  box.querySelectorAll('[data-h]').forEach((b) => {
+    b.onclick = () => { send({ t: 'setHero', seat: seatIndex, hero: b.dataset.h }); close(); };
+  });
+}
+
 /** Base game, Expansion 1 only, or both decks merged. Only the host can change it. */
 function modePickerHtml() {
   const modes = room.modes || [];
@@ -607,6 +634,7 @@ function renderRoom(app) {
   if (!room) return;
   const seats = room.seats.map((s) => `<div class="seat-row"><div class="seat-num">${s.index + 1}</div>
     <div class="grow"><b>${esc(s.name)}</b> ${s.bot ? '<span class="tag">bot</span>' : ''} ${s.host ? '<span class="tag">host</span>' : ''} ${s.index === room.you ? '<span class="tag">you</span>' : ''}</div>
+    ${s.index === room.you || (room.owner && s.bot) ? `<button class="btn secondary" data-hero="${s.index}">Wizard: ${esc(heroLabel(s))}</button>` : `<span class="muted">${esc(heroLabel(s))}</span>`}
     ${room.owner && s.index !== room.you ? `<button class="btn secondary" data-remove="${s.index}">Remove</button>` : ''}</div>`).join('');
   const canStart = room.owner && room.seats.length >= 2;
   app.innerHTML = `<div class="screen">${topActions()}
@@ -621,6 +649,7 @@ function renderRoom(app) {
   wireTop();
   const ab = $('#addBot'); if (ab) ab.onclick = () => send({ t: 'addBot' });
   const st = $('#start'); if (st) st.onclick = () => send({ t: 'start' });
+  document.querySelectorAll('[data-hero]').forEach((b) => { b.onclick = () => openHeroPicker(Number(b.dataset.hero)); });
   const sp = $('#speedMode'); if (sp) sp.onchange = () => send({ t: 'setSpeed', on: sp.checked });
   document.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => send({ t: 'setMode', mode: b.dataset.mode }); });
   $('#leave').onclick = () => send({ t: 'leaveGame' });

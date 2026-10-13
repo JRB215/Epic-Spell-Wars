@@ -122,6 +122,15 @@ class Hub(
                     broadcastLobby()
                 }
             }
+            "setHero" -> if (room != null && seat != null) {
+                // You choose your own wizard; the host can also choose for a bot.
+                val target = msg.int("seat") ?: seat.index
+                val allowed = target == seat.index || (room.ownerKey == client.key && room.seats.getOrNull(target)?.bot == true)
+                if (allowed) {
+                    val heroId = msg.string("hero")?.takeIf { it.isNotEmpty() }
+                    room.setHero(target, heroId)?.let { error(client, it) } ?: room.broadcastRoom()
+                }
+            }
             "setSpeed" -> if (room != null && room.ownerKey == client.key && room.setSpeed(msg.bool("on") == true)) {
                 room.broadcastRoom()
                 broadcastLobby()

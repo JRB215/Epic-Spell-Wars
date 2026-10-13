@@ -106,6 +106,20 @@ class RandomGamesTest {
     }
 
     @Test
+    fun askedForHeroesAreGivenAndTheRestAreRandomWithoutRepeats() {
+        val wanted = catalog.heroes[5].id
+        for (seed in 1..20) {
+            val random = Random(seed)
+            val game = Game(
+                catalog, List(6) { "Wizard ${it + 1}" }, RandomDecisions(random), RandomDice(random), random,
+                heroChoices = listOf(null, wanted, null, wanted, "no-such-hero"),
+            )
+            assertEquals(wanted, game.players[1].hero.id)
+            assertEquals(6, game.players.map { it.hero.id }.toSet().size, "no hero is used twice (a taken or unknown pick becomes random)")
+        }
+    }
+
+    @Test
     fun sameSeedPlaysTheSameMatch() {
         val a = mutableListOf<GameEvent>()
         val b = mutableListOf<GameEvent>()
