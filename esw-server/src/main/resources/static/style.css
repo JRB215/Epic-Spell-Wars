@@ -310,6 +310,8 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 @media (min-width: 1400px) {
   #piles { display: flex; }
   .turnbar .piles { display: none; }
+  /* Keep the middle clear of the pile column on the left, so the cast cards sit in the true middle. */
+  .stage { padding-left: 134px; }
 }
 
 /* A treasure being awarded: big in the middle, then flying to its owner's profile. */
