@@ -148,3 +148,6 @@ The rulebook and cards leave these open. The engine picks the simplest reading. 
 5. ~~Card text~~ done: all base cards are read from the scans and checked twice.
 6. ~~Game and match~~ confirmed by the owner: a game is played in rounds until one wizard is left standing, who earns a token. The first wizard with two tokens wins the match.
 7. ~~Hero names~~ confirmed by the owner (all 16 read from the cards).
+
+## Expansion 1 (merged or alone)
+See docs/EXPANSION1.md for Blood, the Standee, Creatures and Reactions. Interpretations made while writing the 60 spell cards: a Pay-Blood option is always optional; 'Pay X Blood' lets the wizard pick any amount up to the Blood held; Wolf Cookie adds 1 only to Creature damage against foes; the Double-Headed Ding-Donger is asked once per card and reverses every direction on it; Fart Knight's split dice use 1-4 and 5-6 results per die; a Creature added by another card (Goldie Lock's, Shub-Niggurath) joins the spell as an extra Delivery.
