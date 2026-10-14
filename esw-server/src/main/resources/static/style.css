@@ -385,3 +385,12 @@ input[type=text]:focus { outline: none; border-color: var(--gold); }
 .float.blood { color: #ff2f3d; font-size: 1.8rem; }
 .modepick { margin-top: 14px; }
 .modepick .top-actions { margin: 6px 0; flex-wrap: wrap; }
+/* Choosing a wizard in the room */
+#heropick { position: fixed; inset: 0; background: rgba(0, 0, 0, .7); z-index: 90; display: grid; place-items: center; padding: 16px; }
+.heropanel { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 16px; max-width: 980px; max-height: 92vh; overflow: auto; width: 100%; }
+.herogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+.hero-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--panel2); color: var(--ink); border: 2px solid var(--line); border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; }
+.hero-tile img { width: 100%; max-height: 150px; object-fit: contain; }
+.hero-tile small { color: var(--muted); font-size: .7rem; }
+.hero-tile.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(245, 197, 24, .5); }
+.hero-tile:disabled { opacity: .35; cursor: not-allowed; }

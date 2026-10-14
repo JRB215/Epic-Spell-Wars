@@ -33,6 +33,9 @@ class Seat(val index: Int, var name: String, @Volatile var key: String?, val bot
     @Volatile var disconnectedAt = 0L
     @Volatile var takeover = false
     @Volatile var voteAsked = false
+
+    /** The hero this seat asked for (a hero id), or null for a random one. */
+    @Volatile var hero: String? = null
     val yesVotes: MutableSet<Int> = ConcurrentHashMap.newKeySet()
 
     val connected: Boolean get() = bot || session?.isOpen == true
@@ -78,6 +81,19 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
     /** Which cards and rules the table plays with. The owner picks it in the lobby. */
     @Volatile var mode = GameMode.BASE
         private set
+
+    /** Lets a seat pick its wizard (or null for a random one). Two seats cannot have the same hero. */
+    @Synchronized
+    fun setHero(index: Int, heroId: String?): String? {
+        if (state != RoomState.LOBBY) return "The game has already started."
+        val seat = seats.getOrNull(index) ?: return "No such seat."
+        if (heroId != null) {
+            if (services.catalogs.values.first().heroes.none { it.id == heroId }) return "Unknown wizard."
+            if (seats.any { it !== seat && it.hero == heroId }) return "Another player already picked that wizard."
+        }
+        seat.hero = heroId
+        return null
+    }
 
     /** Speed mode: first victory wins the match, and no Dead Wizard cards. */
     @Volatile var speed = false
@@ -140,6 +156,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         rest.forEachIndexed { i, s ->
             val copy = Seat(i, s.name, s.key, s.bot)
             copy.session = s.session
+            copy.hero = s.hero
             seats.add(copy)
         }
     }
@@ -168,7 +185,10 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         "you" to seatOf(forKey ?: "")?.index,
         "seats" to seats.map {
             mapOf("index" to it.index, "name" to it.name, "bot" to it.bot, "connected" to it.connected, "away" to it.takeover,
-                "host" to (it.key != null && it.key == ownerKey))
+                "host" to (it.key != null && it.key == ownerKey), "hero" to it.hero)
+        },
+        "heroes" to services.catalogs.values.first().heroes.map {
+            mapOf("id" to it.id, "name" to it.name, "title" to it.title, "art" to heroArtUrl(it.artScan))
         },
     )
 
@@ -192,7 +212,7 @@ class Room(val id: String, var title: String, var ownerKey: String, private val 
         lastStates.clear()
         val random = Random(System.nanoTime())
         val names = seats.map { it.name }
-        val engine = Game(services.catalogs.getValue(mode), names, HumanDecisions(random), RandomDice(random), random, speedMode = speed) { event -> onEvent(event, names) }
+        val engine = Game(services.catalogs.getValue(mode), names, HumanDecisions(random), RandomDice(random), random, speedMode = speed, heroChoices = seats.map { it.hero }) { event -> onEvent(event, names) }
         game = engine
         broadcastRoom()
         gameThread = thread(name = "game-$id", isDaemon = true) {

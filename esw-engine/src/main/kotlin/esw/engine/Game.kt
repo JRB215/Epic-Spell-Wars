@@ -32,6 +32,8 @@ class Game(
     internal val random: Random,
     /** Speed mode: the first Last Wizard Standing token wins the match, and no Dead Wizard cards are handed out. */
     val speedMode: Boolean = false,
+    /** The hero each seat asked for (by hero id); a null or unknown id, or one already taken, means a random hero. */
+    heroChoices: List<String?> = emptyList(),
     private val sink: (GameEvent) -> Unit = {},
 ) {
     val players: List<PlayerState>
@@ -81,8 +83,11 @@ class Game(
 
     init {
         require(playerNames.size in 2..6) { "Epic Spell Wars is played by 2 to 6 wizards" }
-        val heroes = catalog.heroes.shuffled(random)
-        players = playerNames.mapIndexed { i, name -> PlayerState(i, name, heroes[i]) }
+        val pool = catalog.heroes.shuffled(random).toMutableList()
+        val picked = playerNames.indices.map { i ->
+            heroChoices.getOrNull(i)?.let { wanted -> pool.firstOrNull { it.id == wanted } }?.also { pool.remove(it) }
+        }
+        players = playerNames.mapIndexed { i, name -> PlayerState(i, name, picked[i] ?: pool.removeAt(0)) }
         mainDeck.addAll(catalog.mainDeckCards().map { newCard(it) }.shuffled(random))
         treasureDeck.addAll(catalog.treasureCards().map { newCard(it) }.shuffled(random))
         deadDeck.addAll(catalog.deadWizardCards().map { newCard(it) }.shuffled(random))
