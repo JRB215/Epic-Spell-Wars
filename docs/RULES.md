@@ -153,3 +153,5 @@ The rulebook and cards leave these open. The engine picks the simplest reading. 
 See docs/EXPANSION1.md for Blood, the Standee, Creatures and Reactions. Interpretations made while writing the 60 spell cards: a Pay-Blood option is always optional; 'Pay X Blood' lets the wizard pick any amount up to the Blood held; Wolf Cookie adds 1 only to Creature damage against foes; the Double-Headed Ding-Donger is asked once per card and reverses every direction on it; Fart Knight's split dice use 1-4 and 5-6 results per die; a Creature added by another card (Goldie Lock's, Shub-Niggurath) joins the spell as an extra Delivery.
 
 Deadman's Switch is offered whenever a Power Roll card has exactly one target; it is not offered for Source or Quality cards that pick a foe in their own words. The Treasure's Blood payment follows the usual once-per-round limit.
+
+Zap-o-Rama: the Dead Wizard card adds the top card of the Main Deck to the wizard's first spell of the game once their spell is revealed, one card per Zap-o-Rama held. Wild Magic cards found this way go to the wizard's hand and the next non-Wild card is added instead.

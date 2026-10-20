@@ -444,6 +444,7 @@ class Game(
         if (p.has("plink-cannon")) leftOf(p)?.let { damage(it, 1, p) }
         if (p.alive) {
             revealSpell(p)
+            if (expansion) applyZapORama(p)
             resolveSpell(p)
         }
         resolvePendingBacklash()
@@ -458,8 +459,29 @@ class Game(
         if (expansion && p.alive && lastToAct && p.has("the-golden-handcuffs")) gainTreasure(p)
     }
 
+    /**
+     * Zap-o-Rama (Dead Wizard card): when the wizard resolves their first spell of the game, the top card of the Main Deck
+     * is added to it for each Zap-o-Rama held. A Wild Magic card goes into the hand instead, and the next card is added.
+     */
+    internal fun applyZapORama(p: PlayerState) {
+        val zaps = p.zapThisGame
+        p.zapThisGame = 0
+        val spell = p.spell ?: return
+        repeat(zaps) {
+            var card = drawMain() ?: return
+            while (card.def.type == CardType.WILD_MAGIC) {
+                p.hand.add(card)
+                emit(GameEvent.Info("${p.name}'s Zap-o-Rama turns up Wild Magic, which goes to their hand"))
+                card = drawMain() ?: return
+            }
+            emit(GameEvent.DeckRevealed(p.id, "Zap-o-Rama", listOf(RevealedCard(card.def, true))))
+            spell.cards.add(SpellCard(card, card.def.type, wild = false))
+            emit(GameEvent.CardAddedToSpell(p.id, card.def.name))
+        }
+    }
+
     /** Expansion 1 Treasures that act at the start of their owner's turn, including the "Pay Blood:" powers. */
-    private suspend fun startOfTurnTreasures(p: PlayerState) {
+    internal suspend fun startOfTurnTreasures(p: PlayerState) {
         if (p.has("cod-piece-of-cthulhu")) {
             val victims = foesOf(p).filter { it.blood > 0 }
             if (victims.isNotEmpty()) stealBlood(p, pickAmong(p, victims, "foe to steal 1 Blood from (Cod Piece of Cthulhu)"), 1)
@@ -493,7 +515,7 @@ class Game(
         }
     }
 
-    private suspend fun endOfTurnTreasures(p: PlayerState) {
+    internal suspend fun endOfTurnTreasures(p: PlayerState) {
         if (p.has("triple-barrel-shotgun")) {
             val glyphs = Glyph.entries.sumOf { glyphCount(p, it) / 3 }
             gainBlood(p, glyphs, "Triple-Barrel Shotgun")
@@ -1099,6 +1121,18 @@ class Game(
     }
 
     internal fun giveStandeeForTest(p: PlayerState?) { standeeHolder = p }
+
+    /** Puts a brand-new card of the given design on top of the Main Deck, so the next draw is known. */
+    internal fun stackMainDeck(defId: String) {
+        mainDeck.add(0, newCard(catalog.allDefs.getValue(defId)))
+    }
+
+    /** Puts a brand-new Treasure on top of the Treasure deck. */
+    internal fun stackTreasure(defId: String) {
+        treasureDeck.add(0, newCard(catalog.allDefs.getValue(defId)))
+    }
+
+    internal fun setLastGameWinnerForTest(p: PlayerState?) { lastGameWinner = p }
 
     /** Puts a brand-new Creature face up in front of a wizard. */
     internal fun giveCreature(p: PlayerState, defId: String): CardInstance {
