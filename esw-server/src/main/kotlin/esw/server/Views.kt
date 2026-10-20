@@ -92,6 +92,7 @@ fun gameView(game: Game, viewer: Int, seats: List<SeatInfo>): JsonObject {
         "game" to game.gameNumber,
         "round" to game.roundNumber,
         "expansion" to game.expansion,
+        "speed" to game.speedMode,
         "mode" to game.catalog.mode.name,
         "standeeHolder" to game.standeeHolder?.id,
         "poster" to game.poster?.let { cardView(it) },

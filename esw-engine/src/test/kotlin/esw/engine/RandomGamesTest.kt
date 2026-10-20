@@ -89,6 +89,16 @@ class RandomGamesTest {
     }
 
     @Test
+    fun manyMoreRandomMergedAndExpansionMatchesNeverBreakTheAudit() {
+        for (mode in listOf(GameMode.MERGED, GameMode.EXPANSION1)) {
+            val c = CardCatalog.load(mode)
+            for (seed in 1..400) {
+                playMatch(seed * 7919, 2 + seed % 5, catalog = c)
+            }
+        }
+    }
+
+    @Test
     fun speedModeEndsAfterOneVictoryAndHandsOutNoDeadWizardCards() {
         for (seed in 1..30) {
             val random = Random(seed)

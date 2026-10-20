@@ -28,6 +28,8 @@ class ScriptedDecisions(
             return card.uid
         }
         val picks = mutableListOf(pick(CardType.SOURCE), pick(CardType.QUALITY), pick(CardType.DELIVERY))
+        // The scripted cards were used up in an earlier round: play like a bot from then on.
+        if (picks.all { it == null } && "wild-magic" !in wanted) return bot.chooseSpell(player, hand, treasures)
         if ("wild-magic" in wanted) {
             val wild = hand.first { it.def.type == CardType.WILD_MAGIC && it.uid !in used }
             picks[picks.indexOf(null)] = wild.uid

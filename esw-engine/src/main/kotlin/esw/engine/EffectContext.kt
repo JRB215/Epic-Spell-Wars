@@ -141,6 +141,20 @@ internal class EffectContext(
 
     /** Resolves who a Power Roll card hits. Choices are made before any dice are rolled. */
     suspend fun targets(kind: Target): List<PlayerState> {
+        val picked = pickTargets(kind)
+        // Deadman's Switch: a foe who is the sole target may pay 3 Blood to point the card at a different foe.
+        val only = picked.singleOrNull()
+        if (g.expansion && only != null && only !== caster && only.has("deadmans-switch")) {
+            val switchCard = only.treasures.first { it.def.id == "deadmans-switch" }
+            val others = g.players.filter { it.alive && it !== caster && it !== only }
+            if (others.isNotEmpty() && g.payForTreasure(only, switchCard, 3, "switch the target of ${card.name} (Deadman's Switch)")) {
+                return listOf(g.pickAmong(only, others, "new target for ${card.name} (Deadman's Switch)"))
+            }
+        }
+        return picked
+    }
+
+    private suspend fun pickTargets(kind: Target): List<PlayerState> {
         if (kind == Target.SELF) return listOf(caster)
         val all = foes()
         if (spell.deliveryEachFoe && effectType == CardType.DELIVERY) return all

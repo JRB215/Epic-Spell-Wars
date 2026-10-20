@@ -184,6 +184,34 @@ class ExpansionRulesTest {
     }
 
     @Test
+    fun wizSleeveStevesLetsACreatureInTheSpellTakeTheFatalDamage() {
+        val game = setup(mapOf(0 to listOf("scorchias"), 1 to listOf("wiz-sleeve-steves", "bob")), dice = listOf(6, 1))
+        game.players[1].hp = 3
+        val outcome = round(game)
+        assertFalse(outcome.ended, "the Creature took the hit")
+        assertTrue(game.players[1].alive)
+        assertEquals(3, game.players[1].hp)
+        assertTrue(events.any { it is GameEvent.CreatureLost && it.player == 1 && it.creature == "Bob" })
+    }
+
+    @Test
+    fun queenOfTheDeadsReactionDrawsTwoExtraDeadWizardCards() {
+        val game = setup(mapOf(0 to listOf("scorchias"), 1 to listOf("queen-of-the-deads")), dice = listOf(6, 1))
+        game.players[1].hp = 3
+        round(game)
+        assertFalse(game.players[1].alive)
+        assertEquals(3, game.players[1].deadWizardCards.size, "one for dying and two from the Reaction")
+    }
+
+    @Test
+    fun theSlyRollersReactionDrawsATreasureForTheNextGame() {
+        val game = setup(mapOf(0 to listOf("scorchias"), 1 to listOf("the-sly-rollers")), dice = listOf(6, 1))
+        game.players[1].hp = 3
+        round(game)
+        assertEquals(1, game.players[1].treasureNextGame)
+    }
+
+    @Test
     fun nukionFussionsReactionHurtsTheKiller() {
         // Wizard 2 dies to wizard 1's Scorchia's; the Reaction deals one die (a 4) to wizard 1.
         val game = setup(mapOf(0 to listOf("scorchias"), 1 to listOf("mr-nukion-fussions")), dice = listOf(6, 1, 4))

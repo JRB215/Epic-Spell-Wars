@@ -660,7 +660,9 @@ function renderRoom(app) {
 function hpColor(p) { const r = p.hp / p.maxHp; return r > 0.5 ? 'var(--green)' : r > 0.25 ? 'var(--gold)' : 'var(--red)'; }
 
 function lwsHtml(n) {
-  return `<span class="lws" title="Last Wizard Standing tokens">${[0, 1].map((i) => (i < n
+  // A normal match is first to two tokens; speed mode is first to one, so it shows a single slot.
+  const slots = game && game.speed ? [0] : [0, 1];
+  return `<span class="lws" title="Last Wizard Standing tokens">${slots.map((i) => (i < n
     ? `<span class="tk full"><img src="${PIECE('lws')}" alt="" onerror="this.style.display='none';this.parentNode.style.background='var(--gold)'"></span>`
     : '<span class="tk"></span>')).join('')}</span>`;
 }
